@@ -1,0 +1,42 @@
+[
+  {
+    "id": "store-downtown",
+    "name": "Slice Society — Downtown",
+    "address": "412 Market St, Chicago, IL 60607",
+    "lat": 41.8827,
+    "lng": -87.6412,
+    "hours": "11:00 AM – 11:00 PM",
+    "services": ["delivery", "pickup"],
+    "deliveryRadiusKm": 6
+  },
+  {
+    "id": "store-lakeview",
+    "name": "Slice Society — Lakeview",
+    "address": "3120 N Clark St, Chicago, IL 60657",
+    "lat": 41.9391,
+    "lng": -87.6552,
+    "hours": "11:00 AM – 12:00 AM",
+    "services": ["delivery", "pickup"],
+    "deliveryRadiusKm": 5
+  },
+  {
+    "id": "store-wicker",
+    "name": "Slice Society — Wicker Park",
+    "address": "1580 N Milwaukee Ave, Chicago, IL 60622",
+    "lat": 41.9103,
+    "lng": -87.6773,
+    "hours": "12:00 PM – 10:00 PM",
+    "services": ["pickup"],
+    "deliveryRadiusKm": 0
+  },
+  {
+    "id": "store-hyde-park",
+    "name": "Slice Society — Hyde Park",
+    "address": "1453 E 53rd St, Chicago, IL 60615",
+    "lat": 41.7996,
+    "lng": -87.5901,
+    "hours": "11:00 AM – 10:00 PM",
+    "services": ["delivery", "pickup"],
+    "deliveryRadiusKm": 7
+  }
+]

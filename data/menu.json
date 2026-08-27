@@ -1,0 +1,80 @@
+[
+  {
+    "id": "pizza-margherita",
+    "name": "Margherita",
+    "category": "Pizzas",
+    "description": "San Marzano tomato, fresh mozzarella, basil, olive oil.",
+    "image": "/images/menu/margherita.svg",
+    "basePrice": 13.5,
+    "sizes": [
+      { "label": "10\"", "priceDelta": 0 },
+      { "label": "14\"", "priceDelta": 4 },
+      { "label": "18\"", "priceDelta": 8 }
+    ],
+    "crusts": ["Classic", "Thin", "Deep Dish", "Gluten-Free"],
+    "toppings": ["Extra mozzarella", "Cherry tomato", "Garlic", "Chili flakes"]
+  },
+  {
+    "id": "pizza-pepperoni",
+    "name": "Pepperoni Classic",
+    "category": "Pizzas",
+    "description": "Double pepperoni, mozzarella, oregano, tomato sauce.",
+    "image": "/images/menu/pepperoni.svg",
+    "basePrice": 15,
+    "sizes": [
+      { "label": "10\"", "priceDelta": 0 },
+      { "label": "14\"", "priceDelta": 4 },
+      { "label": "18\"", "priceDelta": 8 }
+    ],
+    "crusts": ["Classic", "Thin", "Deep Dish", "Gluten-Free"],
+    "toppings": ["Extra pepperoni", "Jalapeno", "Onion", "Hot honey"]
+  },
+  {
+    "id": "pizza-veggie",
+    "name": "Garden Veggie",
+    "category": "Pizzas",
+    "description": "Bell pepper, red onion, mushroom, black olive, spinach.",
+    "image": "/images/menu/veggie.svg",
+    "basePrice": 14.5,
+    "sizes": [
+      { "label": "10\"", "priceDelta": 0 },
+      { "label": "14\"", "priceDelta": 4 },
+      { "label": "18\"", "priceDelta": 8 }
+    ],
+    "crusts": ["Classic", "Thin", "Gluten-Free"],
+    "toppings": ["Feta", "Artichoke", "Sun-dried tomato", "Arugula"]
+  },
+  {
+    "id": "side-garlic-knots",
+    "name": "Garlic Knots",
+    "category": "Sides",
+    "description": "Six hand-tied knots, garlic butter, parmesan, marinara dip.",
+    "image": "/images/menu/garlic-knots.svg",
+    "basePrice": 6.5,
+    "sizes": [{ "label": "6 pc", "priceDelta": 0 }, { "label": "12 pc", "priceDelta": 5 }],
+    "crusts": [],
+    "toppings": ["Extra marinara", "Ranch dip", "Chili flakes"]
+  },
+  {
+    "id": "side-caesar",
+    "name": "Caesar Salad",
+    "category": "Sides",
+    "description": "Romaine, shaved parmesan, croutons, house Caesar dressing.",
+    "image": "/images/menu/caesar.svg",
+    "basePrice": 8,
+    "sizes": [{ "label": "Regular", "priceDelta": 0 }, { "label": "Large", "priceDelta": 3 }],
+    "crusts": [],
+    "toppings": ["Grilled chicken", "Anchovies", "Extra dressing"]
+  },
+  {
+    "id": "drink-soda",
+    "name": "Fountain Soda",
+    "category": "Drinks",
+    "description": "Choice of cola, lemon-lime, root beer, or iced tea.",
+    "image": "/images/menu/soda.svg",
+    "basePrice": 2.75,
+    "sizes": [{ "label": "20 oz", "priceDelta": 0 }, { "label": "32 oz", "priceDelta": 1 }],
+    "crusts": [],
+    "toppings": []
+  }
+]
