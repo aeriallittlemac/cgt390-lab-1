@@ -64,7 +64,7 @@ export function MenuBrowser() {
                   <div className="absolute right-3 top-3">
                     <Badge>Deal</Badge>
                   </div>
-                  <div className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+                  <div className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
                     <DealPopover deals={itemDeals} />
                   </div>
                 </>
