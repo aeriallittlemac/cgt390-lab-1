@@ -2,11 +2,15 @@
 
 import { useMemo, useState } from "react";
 import menuData from "@/data/menu.json";
-import type { MenuItem } from "@/lib/types";
+import dealsData from "@/data/deals.json";
+import type { Deal, MenuItem } from "@/lib/types";
 import { formatPrice } from "@/components/common/Price";
+import { Badge } from "@/components/common/Badge";
 import { ItemCustomizer } from "./ItemCustomizer";
+import { DealPopover } from "./DealPopover";
 
 const menu = menuData as MenuItem[];
+const deals = dealsData as Deal[];
 
 export function MenuBrowser() {
   const categories = useMemo(
@@ -15,6 +19,16 @@ export function MenuBrowser() {
   );
   const [active, setActive] = useState(categories[0]);
   const [editing, setEditing] = useState<MenuItem | null>(null);
+
+  const dealsByItemId = useMemo(() => {
+    const map = new Map<string, Deal[]>();
+    for (const deal of deals) {
+      for (const itemId of deal.appliesTo) {
+        map.set(itemId, [...(map.get(itemId) ?? []), deal]);
+      }
+    }
+    return map;
+  }, []);
 
   const visible = menu.filter((m) => m.category === active);
 
@@ -38,30 +52,44 @@ export function MenuBrowser() {
       </div>
 
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visible.map((item) => (
-          <li
-            key={item.id}
-            className="flex flex-col rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"
-          >
-            <div className="mb-3 flex h-32 items-center justify-center rounded-lg bg-zinc-100 text-4xl dark:bg-zinc-800">
-              🍕
-            </div>
-            <h3 className="font-semibold">{item.name}</h3>
-            <p className="mt-1 flex-1 text-sm text-zinc-500">{item.description}</p>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-sm font-semibold">
-                {formatPrice(item.basePrice)}
-              </span>
-              <button
-                type="button"
-                onClick={() => setEditing(item)}
-                className="rounded-full bg-red-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
-              >
-                Customize
-              </button>
-            </div>
-          </li>
-        ))}
+        {visible.map((item) => {
+          const itemDeals = dealsByItemId.get(item.id) ?? [];
+          return (
+            <li
+              key={item.id}
+              className="group relative flex flex-col rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"
+            >
+              {itemDeals.length > 0 && (
+                <>
+                  <div className="absolute right-3 top-3">
+                    <Badge>Deal</Badge>
+                  </div>
+                  <div className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+                    <DealPopover deals={itemDeals} />
+                  </div>
+                </>
+              )}
+
+              <div className="mb-3 flex h-32 items-center justify-center rounded-lg bg-zinc-100 text-4xl dark:bg-zinc-800">
+                🍕
+              </div>
+              <h3 className="font-semibold">{item.name}</h3>
+              <p className="mt-1 flex-1 text-sm text-zinc-500">{item.description}</p>
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-sm font-semibold">
+                  {formatPrice(item.basePrice)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEditing(item)}
+                  className="rounded-full bg-red-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Customize
+                </button>
+              </div>
+            </li>
+          );
+        })}
       </ul>
 
       <ItemCustomizer item={editing} onClose={() => setEditing(null)} />

@@ -5,7 +5,8 @@
     "description": "Buy any large pizza, get a second large for free. Every Tuesday.",
     "code": "TUES2",
     "image": "/images/deals/two-for-one.svg",
-    "expiresAt": "2026-12-31"
+    "expiresAt": "2026-12-31",
+    "appliesTo": ["pizza-margherita", "pizza-pepperoni"]
   },
   {
     "id": "deal-lunch-combo",
@@ -13,7 +14,8 @@
     "description": "Two slices, a side salad, and a drink. Weekdays 11am–2pm.",
     "code": "LUNCH999",
     "image": "/images/deals/lunch-combo.svg",
-    "expiresAt": "2026-10-31"
+    "expiresAt": "2026-10-31",
+    "appliesTo": ["side-caesar", "drink-soda"]
   },
   {
     "id": "deal-family-night",
@@ -21,7 +23,8 @@
     "description": "Two 18\" pizzas, garlic knots, and a 2-liter for $34.99.",
     "code": "FAMILY35",
     "image": "/images/deals/family-night.svg",
-    "expiresAt": "2026-11-30"
+    "expiresAt": "2026-11-30",
+    "appliesTo": ["pizza-pepperoni", "pizza-veggie", "side-garlic-knots"]
   },
   {
     "id": "deal-rewards-double",
@@ -29,6 +32,7 @@
     "description": "Earn 2x points on every order, Friday through Sunday.",
     "code": "DBLPTS",
     "image": "/images/deals/double-points.svg",
-    "expiresAt": "2026-09-30"
+    "expiresAt": "2026-09-30",
+    "appliesTo": []
   }
 ]

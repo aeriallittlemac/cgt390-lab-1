@@ -37,6 +37,8 @@ export interface Deal {
   code: string;
   image: string;
   expiresAt: string;
+  /** Menu item ids this deal applies to. Empty for storewide deals not tied to a specific item. */
+  appliesTo: string[];
 }
 
 export interface CartItem {
