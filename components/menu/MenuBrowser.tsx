@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { sendGAEvent } from "@next/third-parties/google";
 import menuData from "@/data/menu.json";
 import dealsData from "@/data/deals.json";
 import type { Deal, MenuItem } from "@/lib/types";
@@ -31,6 +32,16 @@ export function MenuBrowser() {
   }, []);
 
   const visible = menu.filter((m) => m.category === active);
+
+  function handleCustomizeClick(item: MenuItem) {
+    // Diagnostic event: fires when a shopper opens the customizer, whether or not they finish.
+    sendGAEvent("event", "select_item", {
+      item_id: item.id,
+      item_name: item.name,
+      item_category: item.category,
+    });
+    setEditing(item);
+  }
 
   return (
     <div>
@@ -81,7 +92,7 @@ export function MenuBrowser() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setEditing(item)}
+                  onClick={() => handleCustomizeClick(item)}
                   className="rounded-full bg-red-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
                 >
                   Customize

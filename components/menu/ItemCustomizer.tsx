@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { sendGAEvent } from "@next/third-parties/google";
 import { Drawer } from "@/components/common/Drawer";
 import { useCart } from "@/context/CartContext";
 import type { MenuItem } from "@/lib/types";
@@ -57,6 +58,13 @@ function CustomizerForm({
       toppings,
       qty,
       unitPrice: +unitPrice.toFixed(2),
+    });
+    // Primary event: fires once per confirmed add, from the single "Add to cart" click handler.
+    sendGAEvent("event", "add_to_cart", {
+      item_id: item.id,
+      item_name: item.name,
+      price: +unitPrice.toFixed(2),
+      quantity: qty,
     });
     onClose();
     openCart();
