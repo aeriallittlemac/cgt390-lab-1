@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { Providers } from "@/context/Providers";
 import { Header } from "@/components/header/Header";
@@ -10,6 +11,8 @@ export const metadata: Metadata = {
   description:
     "Order pizza for delivery or pickup, browse the menu, grab a deal, and track your order.",
 };
+
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID ?? "G-Y7R4RY5XRY";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -23,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <CartDrawer />
         </Providers>
       </body>
+      <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />
     </html>
   );
 }
