@@ -35,7 +35,7 @@ export default function TrackerPage() {
           value={orderId}
           onChange={(e) => setOrderId(e.target.value)}
           placeholder="Order number (e.g. SS-1042)"
-          className="flex-1 rounded-lg border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/30 dark:border-zinc-700 dark:bg-zinc-950"
+          className="flex-1 rounded-lg border border-zinc-300 px-3 py-2.5 text-sm outline-none placeholder:text-zinc-600 dark:placeholder:text-zinc-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/30 dark:border-zinc-700 dark:bg-zinc-950"
         />
         <button
           type="submit"
@@ -55,12 +55,12 @@ export default function TrackerPage() {
                   className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                     done
                       ? "bg-red-600 text-white"
-                      : "bg-zinc-200 text-zinc-500 dark:bg-zinc-800"
+                      : "bg-zinc-200 text-zinc-600 dark:text-zinc-400 dark:bg-zinc-800"
                   }`}
                 >
                   {i + 1}
                 </span>
-                <span className={done ? "font-medium" : "text-zinc-500"}>
+                <span className={done ? "font-medium" : "text-zinc-600 dark:text-zinc-400"}>
                   {step.label}
                 </span>
               </li>
@@ -69,7 +69,7 @@ export default function TrackerPage() {
         </ol>
       )}
 
-      <p className="mt-8 text-xs text-zinc-400">
+      <p className="mt-8 text-xs text-zinc-600 dark:text-zinc-400">
         Tracking is mocked in this build — any order number shows a sample status.
       </p>
     </div>

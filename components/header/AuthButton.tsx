@@ -25,7 +25,7 @@ export function AuthButton() {
           className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-zinc-200 bg-white p-4 text-sm shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
         >
           <p className="font-medium">Accounts are coming soon</p>
-          <p className="mt-1 text-zinc-500">
+          <p className="mt-1 text-zinc-600 dark:text-zinc-400">
             Sign-in and saved orders aren&apos;t wired up in this build yet.
           </p>
         </div>

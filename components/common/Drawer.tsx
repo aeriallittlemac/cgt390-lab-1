@@ -115,7 +115,7 @@ export function Drawer({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-full p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            className="rounded-full p-2 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
               <path

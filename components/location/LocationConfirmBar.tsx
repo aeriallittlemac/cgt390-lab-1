@@ -22,7 +22,7 @@ export function LocationConfirmBar({
         {mode === "delivery" ? "Deliver here" : "Pick up here"}
       </button>
       {disabled && (
-        <p className="mt-2 text-center text-xs text-zinc-500">
+        <p className="mt-2 text-center text-xs text-zinc-600 dark:text-zinc-400">
           Choose an address and a store to continue.
         </p>
       )}

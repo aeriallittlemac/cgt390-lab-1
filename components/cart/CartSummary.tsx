@@ -17,7 +17,7 @@ export function CartSummary({ subtotal }: { subtotal: number }) {
   return (
     <div className="space-y-1 text-sm">
       {rows.map(([label, value]) => (
-        <div key={label} className="flex justify-between text-zinc-500">
+        <div key={label} className="flex justify-between text-zinc-600 dark:text-zinc-400">
           <span>{label}</span>
           <span>{formatPrice(value)}</span>
         </div>

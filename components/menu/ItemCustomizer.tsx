@@ -72,7 +72,7 @@ function CustomizerForm({
 
   return (
     <div className="space-y-6 p-4">
-      <p className="text-sm text-zinc-500">{item.description}</p>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">{item.description}</p>
 
       {item.sizes.length > 0 && (
         <Field label="Size">

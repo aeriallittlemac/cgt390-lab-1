@@ -6,13 +6,13 @@ export function DealPopover({ deals }: { deals: Deal[] }) {
       <ul className="space-y-3">
         {deals.map((deal) => (
           <li key={deal.id}>
-            <p className="text-sm font-semibold text-red-600">{deal.title}</p>
-            <p className="mt-0.5 text-xs text-zinc-500">{deal.description}</p>
+            <p className="text-sm font-semibold text-red-600 dark:text-red-400">{deal.title}</p>
+            <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">{deal.description}</p>
             <div className="mt-1.5 flex items-center justify-between">
               <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[11px] dark:bg-zinc-800">
                 {deal.code}
               </span>
-              <span className="text-[11px] text-zinc-400">
+              <span className="text-[11px] text-zinc-600 dark:text-zinc-400">
                 Ends {new Date(deal.expiresAt).toLocaleDateString()}
               </span>
             </div>

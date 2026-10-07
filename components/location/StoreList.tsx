@@ -27,7 +27,7 @@ export function StoreList({ origin, mode, selectedStoreId, onSelect }: Props) {
 
   if (ranked.length === 0) {
     return (
-      <p className="text-sm text-zinc-500">
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
         No stores offer {mode} for this area yet.
       </p>
     );
@@ -51,18 +51,18 @@ export function StoreList({ origin, mode, selectedStoreId, onSelect }: Props) {
                 active
                   ? "border-red-500 bg-red-50 dark:bg-red-950/30"
                   : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700"
-              } ${outOfRange ? "opacity-50" : ""}`}
+              } ${outOfRange ? "cursor-not-allowed bg-zinc-50 dark:bg-zinc-900" : ""}`}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold">{store.name}</span>
                 {distanceKm != null && (
-                  <span className="shrink-0 text-xs text-zinc-500">
+                  <span className="shrink-0 text-xs text-zinc-600 dark:text-zinc-400">
                     {formatDistance(distanceKm)}
                   </span>
                 )}
               </div>
-              <p className="mt-0.5 text-sm text-zinc-500">{store.address}</p>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{store.address}</p>
+              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
                 Open {store.hours} · {store.services.join(" & ")}
                 {outOfRange ? " · outside delivery range" : ""}
               </p>

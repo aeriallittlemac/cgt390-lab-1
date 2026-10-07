@@ -74,7 +74,7 @@ function LocationDrawerBody() {
         />
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-zinc-500">
+          <h3 className="mb-2 text-sm font-semibold text-zinc-600 dark:text-zinc-400">
             {mode === "delivery" ? "Delivering from" : "Pickup stores"}
           </h3>
           <StoreList

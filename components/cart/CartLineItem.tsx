@@ -20,7 +20,7 @@ export function CartLineItem({
     <li className="flex gap-3 py-3">
       <div className="flex-1">
         <p className="font-medium">{item.name}</p>
-        {detail && <p className="text-xs text-zinc-500">{detail}</p>}
+        {detail && <p className="text-xs text-zinc-600 dark:text-zinc-400">{detail}</p>}
         <div className="mt-2 inline-flex items-center rounded-full border border-zinc-300 dark:border-zinc-700">
           <button
             type="button"
@@ -48,7 +48,7 @@ export function CartLineItem({
         <button
           type="button"
           onClick={onRemove}
-          className="mt-2 text-xs text-zinc-500 hover:text-red-600 hover:underline"
+          className="mt-2 text-xs text-zinc-600 dark:text-zinc-400 hover:text-red-600 hover:underline"
         >
           Remove
         </button>

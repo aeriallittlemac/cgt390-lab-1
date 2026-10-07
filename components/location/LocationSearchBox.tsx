@@ -70,7 +70,7 @@ export function LocationSearchBox({ onPick }: Props) {
         onChange={(e) => handleQueryChange(e.target.value)}
         placeholder="Enter your address or area"
         autoComplete="off"
-        className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/30 dark:border-zinc-700 dark:bg-zinc-950"
+        className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm outline-none placeholder:text-zinc-600 dark:placeholder:text-zinc-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/30 dark:border-zinc-700 dark:bg-zinc-950"
       />
 
       <button
@@ -91,7 +91,7 @@ export function LocationSearchBox({ onPick }: Props) {
       </button>
 
       {geoError && <p className="text-sm text-amber-600">{geoError}</p>}
-      {loading && <p className="text-sm text-zinc-500">Searching…</p>}
+      {loading && <p className="text-sm text-zinc-600 dark:text-zinc-400">Searching…</p>}
 
       {results.length > 0 && (
         <ul className="divide-y divide-zinc-100 overflow-hidden rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">

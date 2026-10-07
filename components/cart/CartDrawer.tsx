@@ -28,7 +28,7 @@ export function CartDrawer() {
         <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
           <span aria-hidden="true" className="text-3xl">🛒</span>
           <p className="font-medium">Your cart is empty</p>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Add something from the menu to get started.
           </p>
         </div>

@@ -20,7 +20,7 @@ export function LocationMap({
             ? `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`
             : "Search or use your location"}
         </p>
-        <p className="text-[10px] uppercase tracking-wide text-zinc-400">
+        <p className="text-[10px] uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
           Map preview — Leaflet wiring in phase 5
         </p>
       </div>

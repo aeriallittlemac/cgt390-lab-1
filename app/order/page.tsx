@@ -25,7 +25,7 @@ export default function OrderPage() {
   }, [hydrated, selectedLocation, orderId, open, router]);
 
   if (!hydrated) {
-    return <p className="mx-auto max-w-2xl px-4 py-12 text-zinc-500">Loading…</p>;
+    return <p className="mx-auto max-w-2xl px-4 py-12 text-zinc-600 dark:text-zinc-400">Loading…</p>;
   }
 
   if (!selectedLocation) return null; // guard effect is redirecting
@@ -55,7 +55,7 @@ export default function OrderPage() {
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
         <span aria-hidden="true" className="text-5xl">✅</span>
         <h1 className="mt-4 text-2xl font-bold">Order placed</h1>
-        <p className="mt-2 text-zinc-500">
+        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
           Your order number is <span className="font-mono font-semibold">{orderId}</span>.
         </p>
         <Link
@@ -73,7 +73,7 @@ export default function OrderPage() {
       <h1 className="text-3xl font-bold">Review your order</h1>
 
       <section className="mt-6 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
-        <h2 className="text-sm font-semibold text-zinc-500">
+        <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
           {selectedLocation.mode === "delivery" ? "Deliver to" : "Pick up at"}
         </h2>
         <p className="mt-1">{selectedLocation.label}</p>
@@ -89,7 +89,7 @@ export default function OrderPage() {
       <section className="mt-6">
         <h2 className="mb-2 text-lg font-semibold">Items</h2>
         {items.length === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Your cart is empty.{" "}
             <Link href="/menu" className="text-red-600 hover:underline">
               Add something from the menu.
@@ -122,7 +122,7 @@ export default function OrderPage() {
       >
         {placing ? "Placing order…" : "Place order"}
       </button>
-      <p className="mt-2 text-center text-xs text-zinc-400">
+      <p className="mt-2 text-center text-xs text-zinc-600 dark:text-zinc-400">
         No payment is taken — this is a scaffold build.
       </p>
     </div>
