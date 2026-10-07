@@ -7,11 +7,11 @@ import { Badge } from "@/components/common/Badge";
 import { DealPopover } from "./DealPopover";
 
 /**
- * A menu card whose deal popover opens on mouse hover, on keyboard focus
- * anywhere inside the card (Tab / Shift+Tab), or by activating the "Deal"
- * button. Escape dismisses it without moving focus (WCAG 1.4.13), and the
- * Customize button is described by the popover so screen readers announce
- * the deal too.
+ * A menu card whose deal panel follows the disclosure pattern: the "Deal"
+ * button toggles it (aria-expanded). It also opens on mouse hover and when
+ * keyboard focus reaches the Customize button. Escape dismisses it without
+ * moving focus (WCAG 1.4.13), and the Customize button is described by the
+ * panel so screen readers announce the deal too.
  */
 export function MenuItemCard({
   item,
@@ -24,6 +24,7 @@ export function MenuItemCard({
 }) {
   const popoverId = useId();
   const cardRef = useRef<HTMLLIElement>(null);
+  const badgeRef = useRef<HTMLButtonElement>(null);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [pinned, setPinned] = useState(false);
@@ -68,7 +69,11 @@ export function MenuItemCard({
         const enteringCard = !e.currentTarget.contains(e.relatedTarget);
         if (enteringCard) setDismissed(false);
         // Only keyboard focus opens it; a tap that focuses a button shouldn't.
-        if (e.target.matches(":focus-visible")) setFocused(true);
+        // The Deal button is excluded so Enter on it always toggles predictably.
+        const target = e.target as Element;
+        setFocused(
+          target !== badgeRef.current && target.matches(":focus-visible"),
+        );
       }}
       onBlur={(e) => {
         if (e.currentTarget.contains(e.relatedTarget)) return;
@@ -86,6 +91,7 @@ export function MenuItemCard({
       {hasDeals && (
         <>
           <button
+            ref={badgeRef}
             type="button"
             aria-expanded={open}
             aria-controls={popoverId}
@@ -98,7 +104,6 @@ export function MenuItemCard({
           </button>
           <div
             id={popoverId}
-            role="tooltip"
             className={`absolute bottom-full left-0 z-50 mb-2 transition-opacity duration-150 ${
               open ? "visible opacity-100" : "pointer-events-none invisible opacity-0"
             }`}
@@ -108,7 +113,7 @@ export function MenuItemCard({
         </>
       )}
 
-      <div className="mb-3 flex h-32 items-center justify-center rounded-lg bg-zinc-100 text-4xl dark:bg-zinc-800">
+      <div aria-hidden="true" className="mb-3 flex h-32 items-center justify-center rounded-lg bg-zinc-100 text-4xl dark:bg-zinc-800">
         🍕
       </div>
       <h3 className="font-semibold">{item.name}</h3>
