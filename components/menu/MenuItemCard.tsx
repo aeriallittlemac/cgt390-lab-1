@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 import type { Deal, MenuItem } from "@/lib/types";
 import { formatPrice } from "@/components/common/Price";
@@ -96,7 +97,7 @@ export function MenuItemCard({
             aria-expanded={open}
             aria-controls={popoverId}
             onClick={toggle}
-            className="absolute right-3 top-3 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+            className="absolute right-3 top-3 z-10 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
           >
             <Badge>
               Deal<span className="sr-only"> details for {item.name}</span>
@@ -113,8 +114,15 @@ export function MenuItemCard({
         </>
       )}
 
-      <div aria-hidden="true" className="mb-3 flex h-32 items-center justify-center rounded-lg bg-zinc-100 text-4xl dark:bg-zinc-800">
-        🍕
+      {/* Sizes mirror MenuBrowser's grid: 1 col, 2 at sm, 3 at lg in a max-w-6xl container. */}
+      <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+        <Image
+          src={item.image}
+          alt=""
+          fill
+          sizes="(min-width: 1024px) 370px, (min-width: 640px) 50vw, 100vw"
+          className="object-cover"
+        />
       </div>
       <h3 className="font-semibold">{item.name}</h3>
       <p className="mt-1 flex-1 text-sm text-zinc-600 dark:text-zinc-400">{item.description}</p>
