@@ -1,0 +1,57 @@
+
+[FAIL] 1 Successful action | Valid pickup order from an anonymous guest
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}
+  Expected: 201 with id, status received, server-computed prices, no echoed input
+  Actual:   200 {"id":"SS-3060","status":"received","placedAt":"2026-10-22T15:51:09.458Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}}
+
+[FAIL] 2 Invalid input | Missing items
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown"}
+  Expected: 400 naming the items field
+  Actual:   200 {"id":"SS-7262","status":"received","placedAt":"2026-10-22T15:51:09.475Z","echo":{"mode":"pickup","storeId":"store-downtown"}}
+
+[FAIL] 2 Invalid input | Wrong type: qty is a string
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":"two"}]}
+  Expected: 400 naming qty
+  Actual:   200 {"id":"SS-4318","status":"received","placedAt":"2026-10-22T15:51:09.507Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":"two"}]}}
+
+[FAIL] 2 Invalid input | Unacceptable value: size not offered for this item
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"99\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}
+  Expected: 400 naming size
+  Actual:   200 {"id":"SS-9583","status":"received","placedAt":"2026-10-22T15:51:09.531Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"99\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}}
+
+[FAIL] 2 Invalid input | Malformed JSON body
+  Request:  POST /api/orders { not json
+  Expected: 400 invalid JSON
+  Actual:   200 {"id":"SS-7929","status":"received","placedAt":"2026-10-22T15:51:09.553Z","echo":null}
+
+[FAIL] 3 Access boundary | Client tries to set server-owned fields (id, status)
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}],"id":"SS-0001","status":"delivered"}
+  Expected: 400 rejecting the unexpected fields; client cannot choose id or status
+  Actual:   200 {"id":"SS-5206","status":"received","placedAt":"2026-10-22T15:51:09.569Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}],"id":"SS-0001","status":"delivered"}}
+
+[PASS] 3 Access boundary | Anonymous GET tries to list all orders
+  Request:  GET /api/orders 
+  Expected: 405, there is no endpoint that lists other customers' orders
+  Actual:   405 (empty body)
+
+[FAIL] 4 Edge case | Tampered price: client sends unitPrice 0.01
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2,"unitPrice":0.01}]}
+  Expected: 400; prices come from the menu, never from the client
+  Actual:   200 {"id":"SS-6282","status":"received","placedAt":"2026-10-22T15:51:09.617Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2,"unitPrice":0.01}]}}
+
+[FAIL] 4 Edge case | Nonexistent store
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-atlantis","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}
+  Expected: 422 unknown store
+  Actual:   200 {"id":"SS-3626","status":"received","placedAt":"2026-10-22T15:51:09.638Z","echo":{"mode":"pickup","storeId":"store-atlantis","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}}
+
+[FAIL] 4 Edge case | Delivery from a pickup-only store (store-wicker)
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-wicker","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}
+  Expected: 422 store does not offer delivery
+  Actual:   200 {"id":"SS-2954","status":"received","placedAt":"2026-10-22T15:51:09.655Z","echo":{"mode":"delivery","storeId":"store-wicker","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}}
+
+[FAIL] 4 Edge case | Empty cart
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[]}
+  Expected: 422 order must contain at least one item
+  Actual:   200 {"id":"SS-9974","status":"received","placedAt":"2026-10-22T15:51:09.670Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[]}}
+
+1/11 cases match the contract (http://localhost:3000)
