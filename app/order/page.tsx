@@ -15,6 +15,7 @@ export default function OrderPage() {
   const { items, subtotal, clear } = useCart();
   const [placing, setPlacing] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Route guard: no confirmed location -> bounce home and open the drawer.
   useEffect(() => {
@@ -32,19 +33,34 @@ export default function OrderPage() {
 
   async function placeOrder() {
     setPlacing(true);
+    setError(null);
     try {
+      // Send only what the customer chose; the server sets prices, id and status.
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: selectedLocation!.mode,
           storeId: selectedLocation!.storeId,
-          items,
+          items: items.map(({ menuItemId, size, crust, toppings, qty }) => ({
+            menuItemId,
+            size,
+            crust,
+            toppings,
+            qty,
+          })),
         }),
       });
-      const data = (await res.json()) as { id: string };
+      const data = (await res.json()) as { id?: string; error?: string };
+      if (!res.ok || !data.id) {
+        // Keep the cart so the customer can fix the problem and retry.
+        setError(data.error ?? "We couldn't place your order. Please try again.");
+        return;
+      }
       setOrderId(data.id);
       clear();
+    } catch {
+      setError("We couldn't reach the server. Check your connection and try again.");
     } finally {
       setPlacing(false);
     }
@@ -122,6 +138,11 @@ export default function OrderPage() {
       >
         {placing ? "Placing order…" : "Place order"}
       </button>
+      {error && (
+        <p role="alert" className="mt-3 text-center text-sm text-red-700 dark:text-red-400">
+          {error}
+        </p>
+      )}
       <p className="mt-2 text-center text-xs text-zinc-600 dark:text-zinc-400">
         No payment is taken — this is a scaffold build.
       </p>

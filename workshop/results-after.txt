@@ -1,0 +1,57 @@
+
+[PASS] 1 Successful action | Valid pickup order from an anonymous guest
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}
+  Expected: 201 with id, status received, server-computed prices, no echoed input
+  Actual:   201 {"id":"SS-8049","status":"received","placedAt":"2026-10-22T15:52:59.876Z","mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","name":"Margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2,"unitPrice":19,"lineTotal":38}],"subtotal":38}
+
+[PASS] 2 Invalid input | Missing items
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown"}
+  Expected: 400 naming the items field
+  Actual:   400 {"error":"items must be an array"}
+
+[PASS] 2 Invalid input | Wrong type: qty is a string
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":"two"}]}
+  Expected: 400 naming qty
+  Actual:   400 {"error":"items[0].qty must be a whole number from 1 to 20"}
+
+[PASS] 2 Invalid input | Unacceptable value: size not offered for this item
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"99\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}
+  Expected: 400 naming size
+  Actual:   400 {"error":"items[0].size \"99\"\" is not offered for Margherita"}
+
+[PASS] 2 Invalid input | Malformed JSON body
+  Request:  POST /api/orders { not json
+  Expected: 400 invalid JSON
+  Actual:   400 {"error":"Request body must be valid JSON"}
+
+[PASS] 3 Access boundary | Client tries to set server-owned fields (id, status)
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}],"id":"SS-0001","status":"delivered"}
+  Expected: 400 rejecting the unexpected fields; client cannot choose id or status
+  Actual:   400 {"error":"Unexpected field(s): id, status"}
+
+[PASS] 3 Access boundary | Anonymous GET tries to list all orders
+  Request:  GET /api/orders 
+  Expected: 405, there is no endpoint that lists other customers' orders
+  Actual:   405 (empty body)
+
+[PASS] 4 Edge case | Tampered price: client sends unitPrice 0.01
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2,"unitPrice":0.01}]}
+  Expected: 400; prices come from the menu, never from the client
+  Actual:   400 {"error":"items[0]: unexpected field(s): unitPrice"}
+
+[PASS] 4 Edge case | Nonexistent store
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-atlantis","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}
+  Expected: 422 unknown store
+  Actual:   422 {"error":"Unknown store: store-atlantis"}
+
+[PASS] 4 Edge case | Delivery from a pickup-only store (store-wicker)
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-wicker","items":[{"menuItemId":"pizza-margherita","size":"14\"","crust":"Thin","toppings":["Garlic"],"qty":2}]}
+  Expected: 422 store does not offer delivery
+  Actual:   422 {"error":"Slice Society — Wicker Park does not offer delivery"}
+
+[PASS] 4 Edge case | Empty cart
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[]}
+  Expected: 422 order must contain at least one item
+  Actual:   422 {"error":"Order must contain at least one item"}
+
+11/11 cases match the contract (http://localhost:3000)

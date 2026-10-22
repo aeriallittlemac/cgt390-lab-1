@@ -6,6 +6,7 @@ import { Drawer } from "@/components/common/Drawer";
 import { useCart } from "@/context/CartContext";
 import type { MenuItem } from "@/lib/types";
 import { formatPrice } from "@/components/common/Price";
+import { ADD_ON_PRICE, unitPriceFor } from "@/lib/pricing";
 
 export function ItemCustomizer({
   item,
@@ -40,8 +41,7 @@ function CustomizerForm({
   const [toppings, setToppings] = useState<string[]>([]);
   const [qty, setQty] = useState(1);
 
-  const unitPrice =
-    item.basePrice + (item.sizes[size]?.priceDelta ?? 0) + toppings.length * 1.5;
+  const unitPrice = unitPriceFor(item, item.sizes[size]?.label ?? "", toppings.length);
 
   function toggleTopping(t: string) {
     setToppings((prev) =>
@@ -100,7 +100,7 @@ function CustomizerForm({
       )}
 
       {item.toppings.length > 0 && (
-        <Field label="Add-ons (+$1.50 each)">
+        <Field label={`Add-ons (+${formatPrice(ADD_ON_PRICE)} each)`}>
           <div className="flex flex-wrap gap-2">
             {item.toppings.map((t) => (
               <Chip
