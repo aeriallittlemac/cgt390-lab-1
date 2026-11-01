@@ -1,5 +1,6 @@
 import "server-only";
 import { mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -8,9 +9,13 @@ import { DatabaseSync } from "node:sqlite";
 //
 // Limitation: serverless hosts (e.g. Vercel) have a read-only, per-instance
 // filesystem, so this file store only persists on a long-running Node server or
-// locally. Swap for a hosted database before relying on it in production.
+// locally. On Vercel only /tmp is writable, so the database lives there and is
+// wiped whenever an instance is recycled. Swap for a hosted database before
+// relying on it in production.
 
-const DB_PATH = process.env.DATABASE_PATH ?? join(process.cwd(), ".data", "slice-society.db");
+const DB_PATH =
+  process.env.DATABASE_PATH ??
+  (process.env.VERCEL ? join(tmpdir(), "slice-society.db") : join(process.cwd(), ".data", "slice-society.db"));
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
