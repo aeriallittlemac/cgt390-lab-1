@@ -1,0 +1,78 @@
+Setup: server has accounts; signed up a fictional customer for the order cases.
+
+[PASS] Orders | Body is a JSON array instead of an object
+  Request:  POST /api/orders []
+  Expected: 400
+  Actual:   400 {"error":"Body must be a JSON object"}
+
+[PASS] Orders | Body is a bare JSON string
+  Request:  POST /api/orders "hello"
+  Expected: 400
+  Actual:   400 {"error":"Body must be a JSON object"}
+
+[PASS] Orders | Negative quantity (qty: -3)
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":-3}]}
+  Expected: 400 naming qty
+  Actual:   400 {"error":"items[0].qty must be a whole number from 1 to 20"}
+
+[PASS] Orders | 1 MB body (an extra 'note' field of 1,000,000 characters)
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":1}],"note":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx… (1000140 chars total)
+  Expected: Rejected (4xx) without sending the megabyte back
+  Actual:   400 {"error":"Unexpected field(s): note"}
+  Note:     Response size: 37 characters
+
+[PASS] Orders | Cross-site 'simple' POST: Content-Type text/plain from another origin
+  Request:  POST /api/orders (Origin: https://evil.example) {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":1}]}
+  Expected: Rejected (403 or 415); browsers send this kind of request without a CORS preflight
+  Actual:   403 {"error":"Cross-site request rejected"}
+
+[PASS] Orders | HTML/script text inside a field
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":["<script>alert(1)</script>"],"qty":1}]}
+  Expected: Never returned as an HTML page (Content-Type must be JSON)
+  Actual:   400 {"error":"items[0].toppings: \"<script>alert(1)</script>\" is not offered for Fountain Soda"}
+  Note:     Content-Type: application/json
+
+[FAIL] Orders | Duplicate submission: the same order sent twice in a row
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":1}]}
+  Expected: Second request rejected (409) or answered with the first order's id
+  Actual:   201 {"id":"SS-463842","status":"received","placedAt":"2026-10-22T17:07:56.089Z","mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","name":"Fountain Soda","size":"20 oz","crust":"","toppings":[],"qty":1,"unitPrice":2.75,"lineTotal":2.75}],"subtotal":2.75}
+  Note:     First id SS-175853, second id SS-463842
+
+[PASS] Orders | Order number uniqueness across 200 orders
+  Request:  POST /api/orders (the same valid order, 200 times)
+  Expected: 200 distinct order numbers
+  Actual:   201 200 orders placed, 200 distinct ids
+  Note:     With 4-digit numbers (9,000 possibilities) a repeat in 200 orders is ~89% likely; it varies run to run.
+
+[PASS] Geocode | Search shorter than 3 characters
+  Request:  GET /api/geocode?q=ab 
+  Expected: 200 with an empty list, no upstream call
+  Actual:   200 []
+
+[FAIL] Geocode | Coordinates that aren't numbers (lat=abc, lng=xyz)
+  Request:  GET /api/geocode?lat=abc&lng=xyz 
+  Expected: 400 before contacting Nominatim
+  Actual:   200 []
+
+[FAIL] Geocode | Coordinates outside the planet (lat=999, lng=999)
+  Request:  GET /api/geocode?lat=999&lng=999 
+  Expected: 400 before contacting Nominatim
+  Actual:   200 []
+
+[FAIL] Geocode | 3,000-character search query
+  Request:  GET /api/geocode?q=pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza  
+  Expected: 400 (too long) before contacting Nominatim
+  Actual:   200 []
+
+[FAIL] Deals and menu | Public deals list excludes expired deals
+  Request:  GET /api/deals 
+  Expected: 200 with no deal whose expiresAt is before 2026-10-22
+  Actual:   200 [{"id":"deal-two-for-one","title":"2 for Tuesday","description":"Buy any large pizza, get a second large for free. Every Tuesday.","code":"TUES2","image":"/images/deals/two-for-one.svg","expiresAt":"2026-12-31","appliesTo":["pizza-margherita","pizza-pepperoni"]},{"id":"deal-lunch-combo","title":"Lunch Combo — $9.99","description":"Two slices, a side salad, and a drink. Weekdays 11am–2pm.","code":"LUNCH999","image":"/images/deals/lunch-combo.svg","expiresAt":"2026-10-31","appliesTo":["side-caesar","drink-soda"]},{"id":"deal-family-night","title":"Family Night Bundle","description":"Two 18\" piz… (1028 chars total)
+  Note:     Expired but listed: deal-rewards-double (2026-09-30)
+
+[PASS] Deals and menu | Try to add a menu item through the API
+  Request:  POST /api/menu {"id":"free-pizza","basePrice":0}
+  Expected: 405, the menu is read-only
+  Actual:   405 (empty body)
+
+9/14 cases match the contract (http://localhost:3001)

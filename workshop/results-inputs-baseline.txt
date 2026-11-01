@@ -1,0 +1,78 @@
+Setup: no sign-up on this server (404); order cases run anonymously.
+
+[FAIL] Orders | Body is a JSON array instead of an object
+  Request:  POST /api/orders []
+  Expected: 400
+  Actual:   200 {"id":"SS-3285","status":"received","placedAt":"2026-10-22T17:07:44.528Z","echo":[]}
+
+[FAIL] Orders | Body is a bare JSON string
+  Request:  POST /api/orders "hello"
+  Expected: 400
+  Actual:   200 {"id":"SS-3533","status":"received","placedAt":"2026-10-22T17:07:44.540Z","echo":"hello"}
+
+[FAIL] Orders | Negative quantity (qty: -3)
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":-3}]}
+  Expected: 400 naming qty
+  Actual:   200 {"id":"SS-9578","status":"received","placedAt":"2026-10-22T17:07:44.558Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":-3}]}}
+
+[FAIL] Orders | 1 MB body (an extra 'note' field of 1,000,000 characters)
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":1}],"note":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx… (1000140 chars total)
+  Expected: Rejected (4xx) without sending the megabyte back
+  Actual:   200 {"id":"SS-2544","status":"received","placedAt":"2026-10-22T17:07:44.578Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":1}],"note":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx… (1000222 chars total)
+  Note:     Response size: 1000222 characters
+
+[FAIL] Orders | Cross-site 'simple' POST: Content-Type text/plain from another origin
+  Request:  POST /api/orders (Origin: https://evil.example) {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":1}]}
+  Expected: Rejected (403 or 415); browsers send this kind of request without a CORS preflight
+  Actual:   200 {"id":"SS-3057","status":"received","placedAt":"2026-10-22T17:07:44.596Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":1}]}}
+
+[PASS] Orders | HTML/script text inside a field
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":["<script>alert(1)</script>"],"qty":1}]}
+  Expected: Never returned as an HTML page (Content-Type must be JSON)
+  Actual:   200 {"id":"SS-1207","status":"received","placedAt":"2026-10-22T17:07:44.620Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":["<script>alert(1)</script>"],"qty":1}]}}
+  Note:     Content-Type: application/json
+
+[FAIL] Orders | Duplicate submission: the same order sent twice in a row
+  Request:  POST /api/orders {"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":1}]}
+  Expected: Second request rejected (409) or answered with the first order's id
+  Actual:   200 {"id":"SS-4268","status":"received","placedAt":"2026-10-22T17:07:44.652Z","echo":{"mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":1}]}}
+  Note:     First id SS-9826, second id SS-4268
+
+[FAIL] Orders | Order number uniqueness across 200 orders
+  Request:  POST /api/orders (the same valid order, 200 times)
+  Expected: 200 distinct order numbers
+  Actual:   200 200 orders placed, 197 distinct ids; repeated: SS-7071, SS-3491, SS-6027
+  Note:     With 4-digit numbers (9,000 possibilities) a repeat in 200 orders is ~89% likely; it varies run to run.
+
+[PASS] Geocode | Search shorter than 3 characters
+  Request:  GET /api/geocode?q=ab 
+  Expected: 200 with an empty list, no upstream call
+  Actual:   200 []
+
+[FAIL] Geocode | Coordinates that aren't numbers (lat=abc, lng=xyz)
+  Request:  GET /api/geocode?lat=abc&lng=xyz 
+  Expected: 400 before contacting Nominatim
+  Actual:   200 []
+
+[FAIL] Geocode | Coordinates outside the planet (lat=999, lng=999)
+  Request:  GET /api/geocode?lat=999&lng=999 
+  Expected: 400 before contacting Nominatim
+  Actual:   200 []
+
+[FAIL] Geocode | 3,000-character search query
+  Request:  GET /api/geocode?q=pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza pizza  
+  Expected: 400 (too long) before contacting Nominatim
+  Actual:   200 []
+
+[FAIL] Deals and menu | Public deals list excludes expired deals
+  Request:  GET /api/deals 
+  Expected: 200 with no deal whose expiresAt is before 2026-10-22
+  Actual:   200 [{"id":"deal-two-for-one","title":"2 for Tuesday","description":"Buy any large pizza, get a second large for free. Every Tuesday.","code":"TUES2","image":"/images/deals/two-for-one.svg","expiresAt":"2026-12-31","appliesTo":["pizza-margherita","pizza-pepperoni"]},{"id":"deal-lunch-combo","title":"Lunch Combo — $9.99","description":"Two slices, a side salad, and a drink. Weekdays 11am–2pm.","code":"LUNCH999","image":"/images/deals/lunch-combo.svg","expiresAt":"2026-10-31","appliesTo":["side-caesar","drink-soda"]},{"id":"deal-family-night","title":"Family Night Bundle","description":"Two 18\" piz… (1028 chars total)
+  Note:     Expired but listed: deal-rewards-double (2026-09-30)
+
+[PASS] Deals and menu | Try to add a menu item through the API
+  Request:  POST /api/menu {"id":"free-pizza","basePrice":0}
+  Expected: 405, the menu is read-only
+  Actual:   405 (empty body)
+
+3/14 cases match the contract (http://localhost:3002)

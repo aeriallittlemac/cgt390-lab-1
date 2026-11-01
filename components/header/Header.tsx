@@ -4,10 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { NavTabs } from "./NavTabs";
 import { LocationButton } from "./LocationButton";
-import { AuthButton } from "./AuthButton";
 import { CartButton } from "./CartButton";
 
-export function Header() {
+/** `auth` is the server-rendered sign-in / account control (see AuthMenu). */
+export function Header({ auth }: { auth: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -27,7 +27,7 @@ export function Header() {
           {/* Right group — desktop */}
           <div className="hidden items-center gap-2 sm:flex">
             <LocationButton />
-            <AuthButton />
+            {auth}
           </div>
           <CartButton />
 
@@ -57,7 +57,7 @@ export function Header() {
           <NavTabs onNavigate={() => setMobileOpen(false)} />
           <div className="mt-3 flex flex-col gap-2">
             <LocationButton />
-            <AuthButton />
+            {auth}
           </div>
         </div>
       )}

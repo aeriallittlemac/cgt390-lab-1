@@ -1,0 +1,69 @@
+Line-item limit test for POST /api/orders
+Script: node scripts/test-line-limits.mjs (http://localhost:3000, local dev server)
+Date: 2026-11-01. validateOrder() and the schema were not changed.
+
+Findings
+- There's no limit on how many lines an order can have. Every cart size up to
+  1,000 lines returned 201.
+- Every accepted order stored exactly as many order_items rows as it submitted.
+  The row counts come from the SQLite file, not from the API.
+- Response size grows with the line count, about 143 bytes per line. A 1,000-line
+  order returns about 143 KB.
+- Total request time stayed between 12 and 47 ms at every size, across both runs.
+  Random variation was larger than any effect of cart size, so these runs show no
+  slowdown. The time is measured in the script, from sending the request to
+  receiving the last byte; it is not database time.
+- Every cart repeats one line: pizza-margherita, 14", Thin, toppings ["Garlic"], qty 1.
+  Each size was tried 3 times.
+
+Run 1
+
+Line count | Trial | Status | Total request time (ms) | Response size (bytes) | Submitted | Stored rows | Order id / error
+-----------|-------|--------|-------------------------|-----------------------|-----------|-------------|-----------------
+1          | 1     | 201    | 46.6                    | 286                   | 1         | 1           | SS-183194
+1          | 2     | 201    | 30.6                    | 286                   | 1         | 1           | SS-536428
+1          | 3     | 201    | 14.6                    | 286                   | 1         | 1           | SS-725318
+10         | 1     | 201    | 28.1                    | 1574                  | 10        | 10          | SS-251931
+10         | 2     | 201    | 19.4                    | 1574                  | 10        | 10          | SS-847789
+10         | 3     | 201    | 30.5                    | 1574                  | 10        | 10          | SS-909128
+50         | 1     | 201    | 31.0                    | 7294                  | 50        | 50          | SS-432030
+50         | 2     | 201    | 24.1                    | 7294                  | 50        | 50          | SS-720283
+50         | 3     | 201    | 21.9                    | 7294                  | 50        | 50          | SS-631642
+200        | 1     | 201    | 15.8                    | 28745                 | 200       | 200         | SS-375079
+200        | 2     | 201    | 31.9                    | 28745                 | 200       | 200         | SS-453965
+200        | 3     | 201    | 14.9                    | 28745                 | 200       | 200         | SS-611048
+1000       | 1     | 201    | 34.4                    | 143146                | 1000      | 1000        | SS-963812
+1000       | 2     | 201    | 30.1                    | 143146                | 1000      | 1000        | SS-715755
+1000       | 3     | 201    | 30.0                    | 143146                | 1000      | 1000        | SS-423817
+
+Run 2
+
+Line count | Trial | Status | Total request time (ms) | Response size (bytes) | Submitted | Stored rows | Order id / error
+-----------|-------|--------|-------------------------|-----------------------|-----------|-------------|-----------------
+1          | 1     | 201    | 24.6                    | 286                   | 1         | 1           | SS-872614
+1          | 2     | 201    | 21.8                    | 286                   | 1         | 1           | SS-196120
+1          | 3     | 201    | 15.7                    | 286                   | 1         | 1           | SS-807042
+10         | 1     | 201    | 31.4                    | 1574                  | 10        | 10          | SS-360137
+10         | 2     | 201    | 22.4                    | 1574                  | 10        | 10          | SS-173747
+10         | 3     | 201    | 23.5                    | 1574                  | 10        | 10          | SS-489882
+50         | 1     | 201    | 11.7                    | 7294                  | 50        | 50          | SS-927912
+50         | 2     | 201    | 20.2                    | 7294                  | 50        | 50          | SS-494469
+50         | 3     | 201    | 23.7                    | 7294                  | 50        | 50          | SS-636082
+200        | 1     | 201    | 24.6                    | 28745                 | 200       | 200         | SS-328220
+200        | 2     | 201    | 24.0                    | 28745                 | 200       | 200         | SS-332484
+200        | 3     | 201    | 22.5                    | 28745                 | 200       | 200         | SS-189244
+1000       | 1     | 201    | 33.0                    | 143146                | 1000      | 1000        | SS-528378
+1000       | 2     | 201    | 31.0                    | 143146                | 1000      | 1000        | SS-639552
+1000       | 3     | 201    | 22.6                    | 143146                | 1000      | 1000        | SS-953472
+
+Other test scripts, run the same day against the same server
+- scripts/test-orders.mjs   13/13 passed
+- scripts/test-auth.mjs     27/27 passed
+- scripts/test-inputs.mjs    9/14 passed. These are the same 5 failures as in
+  results-inputs-current.txt: duplicate submission, the three geocode input
+  cases, and expired deals still being listed.
+
+Cleanup
+The orders from run 2 (15 orders, 3,783 order_items rows) belong to
+line-limit-test@example.test. Remove them with:
+  node scripts/test-line-limits.mjs --cleanup

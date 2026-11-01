@@ -51,6 +51,11 @@ export default function OrderPage() {
           })),
         }),
       });
+      if (res.status === 401) {
+        // Session expired since the page loaded; the cart is kept for after sign-in.
+        router.push("/login?next=/order");
+        return;
+      }
       const data = (await res.json()) as { id?: string; error?: string };
       if (!res.ok || !data.id) {
         // Keep the cart so the customer can fix the problem and retry.
@@ -75,7 +80,7 @@ export default function OrderPage() {
           Your order number is <span className="font-mono font-semibold">{orderId}</span>.
         </p>
         <Link
-          href={`/tracker`}
+          href={`/tracker?id=${encodeURIComponent(orderId)}`}
           className="mt-6 inline-flex h-11 items-center rounded-full bg-red-600 px-6 text-sm font-semibold text-white hover:bg-red-700"
         >
           Track this order

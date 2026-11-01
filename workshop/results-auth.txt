@@ -1,0 +1,144 @@
+
+[PASS] Authentication | Sign up with valid details
+  Request:  POST /api/auth/signup {"name":"Customer A","email":"customer-a-1792688357393-1565@example.test","password":"test-pass-123"}
+  Expected: 201 with public user fields only; HttpOnly SameSite=Lax session cookie
+  Actual:   201 {"user":{"id":"2b48db40-b63e-45f5-994b-793d77e4390b","name":"Customer A","email":"customer-a-1792688357393-1565@example.test","role":"customer"}}
+  Set-Cookie: session=<redacted>; Path=/; Expires=Thu, 29 Oct 2026 16:59:17 GMT; Secure; HttpOnly; SameSite=lax
+
+[PASS] Authentication | Sign up again with the same email in different case
+  Request:  POST /api/auth/signup {"name":"Copycat","email":"CUSTOMER-A-1792688357393-1565@EXAMPLE.TEST","password":"test-pass-123"}
+  Expected: 409, emails are unique regardless of case
+  Actual:   409 {"error":"An account with that email already exists"}
+
+[PASS] Authentication | Sign up with a 3-character password
+  Request:  POST /api/auth/signup {"name":"Shorty","email":"short-1792688357514-2165@example.test","password":"abc"}
+  Expected: 400 password length rule
+  Actual:   400 {"error":"password must be 8–128 characters"}
+
+[PASS] Authentication | Sign up while trying to set role: staff
+  Request:  POST /api/auth/signup {"name":"Sneaky","email":"sneaky-1792688357526-2141@example.test","password":"test-pass-123","role":"staff"}
+  Expected: 400 unexpected field; nobody can grant themselves staff
+  Actual:   400 {"error":"Unexpected field(s): role"}
+
+[PASS] Authentication | Log in with the wrong password
+  Request:  POST /api/auth/login {"email":"customer-a-1792688357393-1565@example.test","password":"wrong-pass-999"}
+  Expected: 401 generic message
+  Actual:   401 {"error":"Incorrect email or password"}
+
+[PASS] Authentication | Log in with an email that has no account
+  Request:  POST /api/auth/login {"email":"nobody-1792688357577-7573@example.test","password":"test-pass-123"}
+  Expected: 401 with the same message as a wrong password
+  Actual:   401 {"error":"Incorrect email or password"}
+  Note:     Identical responses mean the login form can't be used to discover who has an account.
+
+[PASS] Authentication | Who am I, with no cookie
+  Request:  GET /api/auth/me 
+  Expected: 401
+  Actual:   401 {"error":"Not signed in"}
+
+[PASS] Authentication | Who am I, with a forged session cookie
+  Request:  GET /api/auth/me 
+  Expected: 401, the token isn't in the sessions table
+  Actual:   401 {"error":"Not signed in"}
+
+[PASS] Authentication | Log in with the correct password
+  Request:  POST /api/auth/login {"email":"customer-a-1792688357393-1565@example.test","password":"test-pass-123"}
+  Expected: 200 with the user and a new session cookie
+  Actual:   200 {"user":{"id":"2b48db40-b63e-45f5-994b-793d77e4390b","name":"Customer A","email":"customer-a-1792688357393-1565@example.test","role":"customer"}}
+  Set-Cookie: session=<redacted>; Path=/; Expires=Thu, 29 Oct 2026 16:59:17 GMT; Secure; HttpOnly; SameSite=lax
+
+[PASS] Authentication | Log out
+  Request:  POST /api/auth/logout 
+  Expected: 204 and the cookie is cleared
+  Actual:   204 (empty body)
+  Set-Cookie: session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT
+
+[PASS] Authentication | Reuse the logged-out session cookie
+  Request:  GET /api/auth/me 
+  Expected: 401, logging out revoked the session on the server
+  Actual:   401 {"error":"Not signed in"}
+
+[PASS] Authentication | Customer A's other session still works
+  Request:  GET /api/auth/me 
+  Expected: 200, logging out one device doesn't affect others
+  Actual:   200 {"user":{"id":"2b48db40-b63e-45f5-994b-793d77e4390b","name":"Customer A","email":"customer-a-1792688357393-1565@example.test","role":"customer"}}
+
+[PASS] Authentication | Sixth failed login for one email within 15 minutes
+  Request:  POST /api/auth/login {"email":"locked-1792688357758-8139@example.test","password":"guess-6"}
+  Expected: 429 with a Retry-After header
+  Actual:   429 {"error":"Too many sign-in attempts. Try again later."}
+  Note:     Retry-After: 900
+
+[PASS] Authentication | Cross-site request carrying A's cookie (CSRF)
+  Request:  POST /api/orders (Origin: https://evil.example) {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"10\"","crust":"Classic","toppings":[],"qty":1}]}
+  Expected: 403, Origin doesn't match this site
+  Actual:   403 {"error":"Cross-site request rejected"}
+
+[PASS] Authorization | Customer A places an order
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"10\"","crust":"Classic","toppings":[],"qty":1}]}
+  Expected: 201, order saved with A as owner
+  Actual:   201 {"id":"SS-542693","status":"received","placedAt":"2026-10-22T16:59:17.975Z","mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","name":"Pepperoni Classic","size":"10\"","crust":"Classic","toppings":[],"qty":1,"unitPrice":15,"lineTotal":15}],"subtotal":15}
+
+[PASS] Authorization | Customer A reads their own order
+  Request:  GET /api/orders/SS-542693 
+  Expected: 200
+  Actual:   200 {"id":"SS-542693","status":"received","placedAt":"2026-10-22T16:59:17.975Z","mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","name":"Pepperoni Classic","size":"10\"","crust":"Classic","toppings":[],"qty":1,"unitPrice":15,"lineTotal":15}],"subtotal":15}
+
+[PASS] Authorization | Customer B reads A's order by id
+  Request:  GET /api/orders/SS-542693 
+  Expected: 404, same as a missing order, so ids can't be probed
+  Actual:   404 {"error":"Order not found"}
+
+[PASS] Authorization | Customer B lists orders
+  Request:  GET /api/orders 
+  Expected: 200 with only B's orders (none), never A's
+  Actual:   200 {"orders":[]}
+
+[PASS] Authorization | Anonymous visitor reads A's order
+  Request:  GET /api/orders/SS-542693 
+  Expected: 401
+  Actual:   401 {"error":"Sign in to view this order"}
+
+[PASS] Authorization | Customer A marks their own order delivered
+  Request:  PATCH /api/orders/SS-542693 {"status":"delivered"}
+  Expected: 403, only staff can change status
+  Actual:   403 {"error":"Only staff can update order status"}
+
+[PASS] Authorization | Anonymous visitor opens /account
+  Request:  GET /account 
+  Expected: 307 redirect to /login?next=/account
+  Actual:   307 /login?next=%2Faccount
+  Location: /login?next=%2Faccount
+
+[PASS] Authorization | Signed-in user opens /login?next=https://evil.example
+  Request:  GET /login?next=https://evil.example 
+  Expected: 307 to /account, never off-site
+  Actual:   307 <!DOCTYPE html><html id="__next_error__"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" as="script" fetchPriority="low" href="/_next/static/chunks/0jvhpaew_uadu.js"/><script src="/_next/static/chunks/3450qyhportkm.js" async=""></script><script src="/_next/static/chunks/05tem0visqf24.js" async=""></script><script src="/_next/static/chunks/3bawhkhjtuhib.js" async=""></script><script src="/_next/static/chunks/turbopack-3p50qm_ogwwmf.js" async=""></script><title>Sign in — Slice Society</title><meta name="description" content="Order pizza for delivery or pickup, browse the menu, grab a deal, and track your order."/><link rel="icon" href="/favicon.ico?favicon.2vob68tjqpejf.ico" sizes="256x256" type="image/x-icon"/><script src="/_next/static/chunks/0cz1d0mv5g_q7.js" noModule=""></script></head><body><div hidden=""><!--$--><!--/$--></div><script src="/_next/static/chunks/0jvhpaew_uadu.js" id="_R_" async=""></script><script>(self.__next_f=self.__next_f||[]).push([0])</script><script>self.__next_f.push([1,"1:\"$Sreact.fragment\"\n2:I[50665,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"Providers\"]\n3:I[17792,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"Header\"]\n4:\"$Sreact.suspense\"\n6:I[39756,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"default\"]\n7:I[37457,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"default\"]\n8:I[4120,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"LocationDrawer\"]\n9:I[67893,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"CartDrawer\"]\na:I[54576,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"GoogleAnalytics\"]\nc:I[97367,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"OutletBoundary\"]\nf:I[97367,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"ViewportBoundary\"]\n11:I[97367,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"MetadataBoundary\"]\n13:I[68027,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"default\",1]\n:HL[\"/_next/static/chunks/35tlaj8394q89.css\",\"style\"]\ne:X\n0:{\"P\":null,\"c\":[\"\",\"login?next=https%3A%2F%2Fevil.example\"],\"q\":\"?next=https%3A%2F%2Fevil.example\",\"i\":false,\"f\":[[[\"\",{\"children\":[\"login\",{\"children\":[\"__PAGE__?{\\\"next\\\":\\\"https://evil.example\\\"}\",{},\"$undefined\",\"$undefined\",4096]},\"$undefined\",\"$undefined\",4096]},\"$undefined\",\"$undefined\",4112],[[\"$\",\"$1\",\"c\",{\"children\":[[[\"$\",\"link\",\"0\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/35tlaj8394q89.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-0\",{\"src\":\"/_next/static/chunks/3fntmmi971322.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-1\",{\"src\":\"/_next/static/chunks/3u-17i0u1fzur.js\",\"async\":true,\"nonce\":\"$undefined\"}]],[\"$\",\"html\",null,{\"lang\":\"en\",\"className\":\"h-full antialiased\",\"children\":[[\"$\",\"body\",null,{\"className\":\"flex min-h-full flex-col bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100\",\"children\":[\"$\",\"$L2\",null,{\"children\":[[\"$\",\"$L3\",null,{\"auth\":[\"$\",\"$4\",null,{\"fallback\":[\"$\",\"span\",null,{\"className\":\"inline-block h-9 w-20\",\"aria-hidden\":\"true\"}],\"children\":\"$L5\"}]}],[\"$\",\"main\",null,{\"className\":\"flex-1\",\"children\":[\"$\",\"$L6\",null,{\"parallelRouterKey\":\"children\",\"error\":\"$undefined\",\"errorStyles\":\"$undefined\",\"errorScripts\":\"$undefined\",\"template\":[\"$\",\"$L7\",null,{}],\"templateStyles\":\"$undefined\",\"templateScripts\":\"$undefined\",\"notFound\":[[[\"$\",\"title\",null,{\"children\":\"404: This page could not be found.\"}],[\"$\",\"div\",null,{\"style\":{\"fontFamily\":\"system-ui,\\\"Segoe UI\\\",Roboto,Helvetica,Arial,sans-serif,\\\"Apple Color Emoji\\\",\\\"Segoe UI Emoji\\\"\",\"height\":\"100vh\",\"textAlign\":\"center\",\"display\":\"flex\",\"flexDirection\":\"column\",\"alignItems\":\"center\",\"justifyContent\":\"center\"},\"children\":[\"$\",\"div\",null,{\"children\":[[\"$\",\"style\",null,{\"dangerouslySetInnerHTML\":{\"__html\":\"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}\"}}],[\"$\",\"h1\",null,{\"className\":\"next-error-h1\",\"style\":{\"display\":\"inline-block\",\"margin\":\"0 20px 0 0\",\"padding\":\"0 23px 0 0\",\"fontSize\":24,\"fontWeight\":500,\"verticalAlign\":\"top\",\"lineHeight\":\"49px\"},\"children\":404}],[\"$\",\"div\",null,{\"style\":{\"display\":\"inline-block\"},\"children\":[\"$\",\"h2\",null,{\"style\":{\"fontSize\":14,\"fontWeight\":400,\"lineHeight\":\"49px\",\"margin\":0},\"children\":\"This page could not be found.\"}]}]]}]}]],[]],\"forbidden\":\"$undefined\",\"unauthorized\":\"$undefined\"}]}],[\"$\",\"$L8\",null,{}],[\"$\",\"$L9\",null,{}]]}]}],[\"$\",\"$La\",null,{\"gaId\":\"G-Y7R4RY5XRY\"}]]}]]}],{\"children\":[[\"$\",\"$1\",\"c\",{\"children\":[null,[\"$\",\"$L6\",null,{\"parallelRouterKey\":\"children\",\"error\":\"$undefined\",\"errorStyles\":\"$undefined\",\"errorScripts\":\"$undefined\",\"template\":[\"$\",\"$L7\",null,{}],\"templateStyles\":\"$undefined\",\"templateScripts\":\"$undefined\",\"notFound\":\"$undefined\",\"forbidden\":\"$undefined\",\"unauthorized\":\"$undefined\"}]]}],{\"children\":[[\"$\",\"$1\",\"c\",{\"children\":[\"$Lb\",[[\"$\",\"script\",\"script-0\",{\"src\":\"/_next/static/chunks/11ty48j3lo9_y.js\",\"async\":true,\"nonce\":\"$undefined\"}]],[\"$\",\"$Lc\",null,{\"children\":[\"$\",\"$4\",null,{\"name\":\"Next.MetadataOutlet\",\"children\":\"$@d\"}]}]]}],{},null,false,null]},null,false,\"$e\"]},null,false,null],[\"$\",\"$1\",\"h\",{\"children\":[null,[\"$\",\"$Lf\",null,{\"children\":\"$L10\"}],[\"$\",\"div\",null,{\"hidden\":true,\"children\":[\"$\",\"$L11\",null,{\"children\":[\"$\",\"$4\",null,{\"name\":\"Next.Metadata\",\"children\":\"$L12\"}]}]}],null]}],false]],\"m\":\"$undefined\",\"G\":[\"$13\",[[\"$\",\"link\",\"0\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/35tlaj8394q89.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}]]],\"S\":false,\"h\":null,\"r\":\"$undefined\",\"s\":\"$undefined\",\"a\":\"$undefined\",\"l\":\"$undefined\",\"p\":\"$undefined\",\"d\":\"$undefined\",\"b\":\"AQm8OIaJ3l6LMeMXwe4_3\"}\n14:I[72092,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"AuthButton\"]\ne:C\n5:[\"$\",\"$L14\",null,{\"user\":{\"name\":\"Customer A\",\"role\":\"customer\"}}]\nb:E{\"digest\":\"NEXT_REDIRECT;replace;/account;307;\"}\n10:[[\"$\",\"meta\",\"0\",{\"charSet\":\"utf-8\"}],[\"$\",\"meta\",\"1\",{\"name\":\"viewport\",\"content\":\"width=device-width, initial-scale=1\"}]]\n15:I[27201,[\"/_next/static/chunks/3fntmmi971322.js\",\"/_next/static/chunks/3u-17i0u1fzur.js\"],\"IconMark\"]\nd:null\n12:[[\"$\",\"title\",\"0\",{\"children\":\"Sign in — Slice Society\"}],[\"$\",\"meta\",\"1\",{\"name\":\"description\",\"content\":\"Order pizza for delivery or pickup, browse the menu, grab a deal, and track your order.\"}],[\"$\",\"link\",\"2\",{\"rel\":\"icon\",\"href\":\"/favicon.ico?favicon.2vob68tjqpejf.ico\",\"sizes\":\"256x256\",\"type\":\"image/x-icon\"}],[\"$\",\"$L15\",\"3\",{}]]\n"])</script></body></html>
+  Location: /account
+
+[PASS] Authorization | Staff reads A's order
+  Request:  GET /api/orders/SS-542693 
+  Expected: 200, staff can see every order
+  Actual:   200 {"id":"SS-542693","status":"received","placedAt":"2026-10-22T16:59:17.975Z","mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","name":"Pepperoni Classic","size":"10\"","crust":"Classic","toppings":[],"qty":1,"unitPrice":15,"lineTotal":15}],"subtotal":15}
+
+[PASS] Authorization | Staff moves A's order received → making
+  Request:  PATCH /api/orders/SS-542693 {"status":"making"}
+  Expected: 200 with status making
+  Actual:   200 {"id":"SS-542693","status":"making","placedAt":"2026-10-22T16:59:17.975Z","mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","name":"Pepperoni Classic","size":"10\"","crust":"Classic","toppings":[],"qty":1,"unitPrice":15,"lineTotal":15}],"subtotal":15}
+
+[PASS] Authorization | Staff skips making → delivered
+  Request:  PATCH /api/orders/SS-542693 {"status":"delivered"}
+  Expected: 409, status can only move one step forward
+  Actual:   409 {"error":"A delivery order that is \"making\" can only move to \"baking\""}
+
+[PASS] Authorization | Staff sets an unknown status
+  Request:  PATCH /api/orders/SS-542693 {"status":"eaten"}
+  Expected: 400 listing the allowed statuses
+  Actual:   400 {"error":"status must be one of: received, making, baking, ready, out, delivered"}
+
+[PASS] Authorization | Customer A sees the staff update
+  Request:  GET /api/orders/SS-542693 
+  Expected: 200 with status making (persisted)
+  Actual:   200 {"id":"SS-542693","status":"making","placedAt":"2026-10-22T16:59:17.975Z","mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","name":"Pepperoni Classic","size":"10\"","crust":"Classic","toppings":[],"qty":1,"unitPrice":15,"lineTotal":15}],"subtotal":15}
+
+27/27 cases match the contract (http://localhost:3001)

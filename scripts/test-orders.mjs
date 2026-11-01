@@ -4,12 +4,16 @@
 //   node scripts/test-orders.mjs                         # http://localhost:3000
 //   node scripts/test-orders.mjs https://your-site.app   # any deployed build
 //
-// Each case sends a request with no cookies or auth headers (an anonymous
-// client, like Postman), prints the request and response, and compares the
-// response to the intended contract. Exit code is 1 if any case fails.
+// Signs up a fresh fictional customer, then sends each order request with that
+// session (except the anonymous cases), prints the request and response, and
+// compares the response to the intended contract. Exit code is 1 if any case fails.
+
+import { createClient, createReporter, uniqueEmail } from "./lib/client.mjs";
 
 const BASE = (process.argv[2] ?? "http://localhost:3000").replace(/\/$/, "");
-const URL_ORDERS = `${BASE}/api/orders`;
+const customer = createClient(BASE);
+const anon = createClient(BASE);
+const r = createReporter();
 
 // A correctly priced line: Margherita 14" (13.50 + 4.00) + 1 add-on (1.50) = 19.00.
 const validLine = {
@@ -20,132 +24,95 @@ const validLine = {
   qty: 2,
 };
 const validOrder = { mode: "pickup", storeId: "store-downtown", items: [validLine] };
+const isOrderId = (v) => typeof v === "string" && /^SS-\d{6}$/.test(v);
+const errorMentions = (res, re) => re.test(res.json?.error ?? "");
 
-const isOrderId = (v) => typeof v === "string" && /^SS-\d{4,}$/.test(v);
-
-const cases = [
-  {
-    group: "1 Successful action",
-    name: "Valid pickup order from an anonymous guest",
-    body: validOrder,
-    expect: "201 with id, status received, server-computed prices, no echoed input",
-    check: (s, b) =>
-      s === 201 &&
-      isOrderId(b?.id) &&
-      b.status === "received" &&
-      b.items?.[0]?.unitPrice === 19 &&
-      b.subtotal === 38 &&
-      !("echo" in b),
-  },
-  {
-    group: "2 Invalid input",
-    name: "Missing items",
-    body: { mode: "pickup", storeId: "store-downtown" },
-    expect: "400 naming the items field",
-    check: (s, b) => s === 400 && /items/.test(b?.error ?? ""),
-  },
-  {
-    group: "2 Invalid input",
-    name: "Wrong type: qty is a string",
-    body: { ...validOrder, items: [{ ...validLine, qty: "two" }] },
-    expect: "400 naming qty",
-    check: (s, b) => s === 400 && /qty/.test(b?.error ?? ""),
-  },
-  {
-    group: "2 Invalid input",
-    name: "Unacceptable value: size not offered for this item",
-    body: { ...validOrder, items: [{ ...validLine, size: '99"' }] },
-    expect: "400 naming size",
-    check: (s, b) => s === 400 && /size/.test(b?.error ?? ""),
-  },
-  {
-    group: "2 Invalid input",
-    name: "Malformed JSON body",
-    raw: "{ not json",
-    expect: "400 invalid JSON",
-    check: (s) => s === 400,
-  },
-  {
-    group: "3 Access boundary",
-    name: "Client tries to set server-owned fields (id, status)",
-    body: { ...validOrder, id: "SS-0001", status: "delivered" },
-    expect: "400 rejecting the unexpected fields; client cannot choose id or status",
-    check: (s, b) => s === 400 && /id|status/.test(b?.error ?? ""),
-  },
-  {
-    group: "3 Access boundary",
-    name: "Anonymous GET tries to list all orders",
-    method: "GET",
-    expect: "405, there is no endpoint that lists other customers' orders",
-    check: (s) => s === 405,
-  },
-  {
-    group: "4 Edge case",
-    name: "Tampered price: client sends unitPrice 0.01",
-    body: { ...validOrder, items: [{ ...validLine, unitPrice: 0.01 }] },
-    expect: "400; prices come from the menu, never from the client",
-    check: (s, b) => s === 400 && /unitPrice/.test(b?.error ?? ""),
-  },
-  {
-    group: "4 Edge case",
-    name: "Nonexistent store",
-    body: { ...validOrder, storeId: "store-atlantis" },
-    expect: "422 unknown store",
-    check: (s, b) => s === 422 && /store/i.test(b?.error ?? ""),
-  },
-  {
-    group: "4 Edge case",
-    name: "Delivery from a pickup-only store (store-wicker)",
-    body: { ...validOrder, mode: "delivery", storeId: "store-wicker" },
-    expect: "422 store does not offer delivery",
-    check: (s, b) => s === 422 && /deliver/i.test(b?.error ?? ""),
-  },
-  {
-    group: "4 Edge case",
-    name: "Empty cart",
-    body: { ...validOrder, items: [] },
-    expect: "422 order must contain at least one item",
-    check: (s, b) => s === 422 && /item/.test(b?.error ?? ""),
-  },
-];
-
-let failed = 0;
-
-for (const c of cases) {
-  const method = c.method ?? "POST";
-  const init = { method, headers: {} };
-  if (method === "POST") {
-    init.headers["Content-Type"] = "application/json";
-    init.body = c.raw ?? JSON.stringify(c.body);
-  }
-
-  let status;
-  let text;
-  try {
-    const res = await fetch(URL_ORDERS, init);
-    status = res.status;
-    text = await res.text();
-  } catch (err) {
-    console.error(`Could not reach ${URL_ORDERS}: ${err.message}`);
-    console.error("Is the dev server running? Start it with: npm run dev");
-    process.exit(2);
-  }
-
-  let json = null;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    // non-JSON response (e.g. a 405 with an empty body)
-  }
-
-  const pass = c.check(status, json);
-  if (!pass) failed++;
-
-  console.log(`\n[${pass ? "PASS" : "FAIL"}] ${c.group} | ${c.name}`);
-  console.log(`  Request:  ${method} /api/orders ${init.body ?? ""}`);
-  console.log(`  Expected: ${c.expect}`);
-  console.log(`  Actual:   ${status} ${text || "(empty body)"}`);
+const signup = await customer.request("POST", "/api/auth/signup", {
+  body: { name: "Order Tester", email: uniqueEmail("orders"), password: "test-pass-123" },
+});
+if (signup.status !== 201) {
+  console.error(`Setup failed: could not create a test account (${signup.status} ${signup.text})`);
+  process.exit(2);
 }
+console.log("Setup: signed up a fictional test customer for the signed-in cases.");
 
-console.log(`\n${cases.length - failed}/${cases.length} cases match the contract (${BASE})`);
-process.exit(failed ? 1 : 0);
+const post = (client, body, raw) => client.request("POST", "/api/orders", { body, raw });
+
+// 1 Successful action
+let res = await post(customer, validOrder);
+const placed = res.json;
+r.check(
+  "1 Successful action",
+  "Valid pickup order from a signed-in customer",
+  "201 with id, status received, server-computed prices, no echoed input",
+  res,
+  res.status === 201 &&
+    isOrderId(placed?.id) &&
+    placed.status === "received" &&
+    placed.items?.[0]?.unitPrice === 19 &&
+    placed.subtotal === 38 &&
+    !("echo" in placed),
+);
+
+res = await customer.request("GET", `/api/orders/${placed?.id}`);
+r.check(
+  "1 Successful action",
+  "Saved order can be read back (persistence)",
+  "200 with the same id, status and subtotal",
+  res,
+  res.status === 200 && res.json?.id === placed?.id && res.json?.subtotal === 38,
+);
+
+// 2 Invalid input
+res = await post(customer, { mode: "pickup", storeId: "store-downtown" });
+r.check("2 Invalid input", "Missing items", "400 naming the items field", res,
+  res.status === 400 && errorMentions(res, /items/));
+
+res = await post(customer, { ...validOrder, items: [{ ...validLine, qty: "two" }] });
+r.check("2 Invalid input", "Wrong type: qty is a string", "400 naming qty", res,
+  res.status === 400 && errorMentions(res, /qty/));
+
+res = await post(customer, { ...validOrder, items: [{ ...validLine, size: '99"' }] });
+r.check("2 Invalid input", "Unacceptable value: size not offered for this item", "400 naming size", res,
+  res.status === 400 && errorMentions(res, /size/));
+
+res = await post(customer, undefined, "{ not json");
+r.check("2 Invalid input", "Malformed JSON body", "400 invalid JSON", res, res.status === 400);
+
+// 3 Access boundary
+res = await post(anon, validOrder);
+r.check("3 Access boundary", "Anonymous visitor tries to place an order", "401, sign-in required", res,
+  res.status === 401);
+
+res = await anon.request("GET", "/api/orders");
+r.check("3 Access boundary", "Anonymous visitor tries to list orders", "401, sign-in required", res,
+  res.status === 401);
+
+res = await post(customer, { ...validOrder, id: "SS-000001", status: "delivered" });
+r.check(
+  "3 Access boundary",
+  "Customer tries to set server-owned fields (id, status)",
+  "400 rejecting the unexpected fields; client cannot choose id or status",
+  res,
+  res.status === 400 && errorMentions(res, /id|status/),
+);
+
+// 4 Edge cases
+res = await post(customer, { ...validOrder, items: [{ ...validLine, unitPrice: 0.01 }] });
+r.check("4 Edge case", "Tampered price: client sends unitPrice 0.01",
+  "400; prices come from the menu, never from the client", res,
+  res.status === 400 && errorMentions(res, /unitPrice/));
+
+res = await post(customer, { ...validOrder, storeId: "store-atlantis" });
+r.check("4 Edge case", "Nonexistent store", "422 unknown store", res,
+  res.status === 422 && errorMentions(res, /store/i));
+
+res = await post(customer, { ...validOrder, mode: "delivery", storeId: "store-wicker" });
+r.check("4 Edge case", "Delivery from a pickup-only store (store-wicker)", "422 store does not offer delivery", res,
+  res.status === 422 && errorMentions(res, /deliver/i));
+
+res = await post(customer, { ...validOrder, items: [] });
+r.check("4 Edge case", "Empty cart", "422 order must contain at least one item", res,
+  res.status === 422 && errorMentions(res, /item/));
+
+r.finish(BASE);

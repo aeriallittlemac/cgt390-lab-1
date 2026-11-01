@@ -1,31 +1,29 @@
 import type { NextRequest } from "next/server";
+import { getCurrentUser } from "@/lib/dal";
 import { validateOrder } from "@/lib/orders";
+import { listOrdersFor, saveOrder } from "@/lib/orderStore";
+import { crossSiteResponse, errorResponse, isCrossSite, readJson } from "@/lib/http";
 
-// Mock order creation. Validates and prices the order on the server, then
-// returns a fake order id the tracker can display.
-// No persistence — a real implementation writes to a DB in a later phase.
+// Places an order for the signed-in user. The server validates and prices it,
+// then saves it with the user as its owner.
 export async function POST(request: NextRequest) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Request body must be valid JSON" }, { status: 400 });
-  }
+  if (isCrossSite(request)) return crossSiteResponse();
 
-  const result = validateOrder(body);
-  if (!result.ok) {
-    return Response.json({ error: result.error }, { status: result.status });
-  }
+  const user = await getCurrentUser();
+  if (!user) return errorResponse(401, "Sign in to place an order");
 
-  const id = `SS-${Math.floor(1000 + Math.random() * 9000)}`;
+  const parsed = await readJson(request);
+  if (!parsed.ok) return parsed.response;
 
-  return Response.json(
-    {
-      id,
-      status: "received",
-      placedAt: new Date().toISOString(),
-      ...result.order,
-    },
-    { status: 201 },
-  );
+  const result = validateOrder(parsed.body);
+  if (!result.ok) return errorResponse(result.status, result.error);
+
+  return Response.json(saveOrder(user.id, result.order), { status: 201 });
+}
+
+// Customers get their own orders; staff get every order.
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) return errorResponse(401, "Sign in to view orders");
+  return Response.json({ orders: listOrdersFor(user) });
 }

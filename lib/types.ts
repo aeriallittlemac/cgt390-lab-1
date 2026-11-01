@@ -69,6 +69,16 @@ export interface Order {
   placedAt: string;
 }
 
+export type UserRole = "customer" | "staff";
+
+/** The signed-in user as exposed to pages and API responses. Never includes the password hash. */
+export interface PublicUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
 export interface RewardHistoryEntry {
   date: string;
   label: string;
