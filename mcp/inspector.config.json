@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "menu-live": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["mcp/menu-server.mjs"],
+      "env": { "MENU_API_BASE": "http://localhost:3000" }
+    },
+    "menu-dead": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["mcp/menu-server.mjs"],
+      "env": { "MENU_API_BASE": "http://127.0.0.1:9" }
+    }
+  }
+}

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "inspect:menu": "mcp-inspector --config mcp/inspector.config.json --server menu-live",
+    "inspect:menu:dead": "mcp-inspector --config mcp/inspector.config.json --server menu-dead"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
@@ -17,6 +19,8 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@modelcontextprotocol/inspector": "^2.13.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
@@ -24,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "zod": "^4.6.7"
   }
 }
