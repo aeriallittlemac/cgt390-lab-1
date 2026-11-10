@@ -10,7 +10,7 @@
 // so "nothing was saved" is checked in the database, not taken from the response.
 // Exit code is 1 if any case fails.
 
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { createClient, createReporter, uniqueEmail } from "./lib/client.mjs";
@@ -36,7 +36,8 @@ if (!existsSync(dbPath)) {
   console.error(`No database at ${dbPath}. Set DATABASE_PATH to the file the server under test uses.`);
   process.exit(2);
 }
-console.log(`Setup: signed up fictional customer ${user.email}. Database: ${dbPath}`);
+// File name only, so saved output doesn't reveal local folder paths.
+console.log(`Setup: signed up fictional customer ${user.email}. Database: ${basename(dbPath)}`);
 
 // ---------- Database snapshots (read-only) ----------
 

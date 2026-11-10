@@ -1,0 +1,94 @@
+Setup: signed up two fictional customers, A (access-a-1794329129917-3649@example.test) and B (access-b-1794329129993-9555@example.test).
+Setup: Account A placed order SS-166864 (status "received", subtotal 24.5).
+
+[PASS] 0 Control | Account A views its own order
+  Request:  GET /api/orders/SS-166864 
+  Expected: 200 with the order
+  Actual:   200 {"id":"SS-166864","status":"received","placedAt":"2026-11-10T16:45:30.034Z","mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","name":"Pepperoni Classic","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1,"unitPrice":24.5,"lineTotal":24.5}],"subtotal":24.5}
+  Note:     Sent with Cookie: session=<redacted> (Account A's session)
+
+[PASS] 1 View | Account B requests Account A's order by id
+  Request:  GET /api/orders/SS-166864 
+  Expected: 404, same as a missing order; no order data
+  Actual:   404 {"error":"Order not found"}
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 1 View | Account B requests an order id that doesn't exist
+  Request:  GET /api/orders/SS-000000 
+  Expected: 404 with the identical body (ids can't be probed)
+  Actual:   404 {"error":"Order not found"}
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 1 View | Account B lists orders
+  Request:  GET /api/orders 
+  Expected: 200 with only B's orders (none), not A's
+  Actual:   200 {"orders":[]}
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 1 View | Account B opens the tracker page for A's order
+  Request:  GET /tracker?id=SS-166864 
+  Expected: 200 page saying the order isn't on B's account, no status steps or order details
+  Actual:   200 (HTML page) "No order SS-166864 on your account."
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 2 Modify | Account B advances A's order status
+  Request:  PATCH /api/orders/SS-166864 {"status":"making"}
+  Expected: 403 (only staff can change status)
+  Actual:   403 {"error":"Only staff can update order status"}
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 2 Modify | Account B changes A's delivery address
+  Request:  PATCH /api/orders/SS-166864 {"address":"742 Example Ave, Test City"}
+  Expected: 403, refused before the body is read
+  Actual:   403 {"error":"Only staff can update order status"}
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 2 Modify | Account B cancels A's order via PATCH
+  Request:  PATCH /api/orders/SS-166864 {"status":"cancelled"}
+  Expected: 403
+  Actual:   403 {"error":"Only staff can update order status"}
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 2 Modify | Account B deletes A's order
+  Request:  DELETE /api/orders/SS-166864 
+  Expected: 405, there is no delete route
+  Actual:   405 (empty body)
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 2 Modify | Account B replaces A's order via PUT
+  Request:  PUT /api/orders/SS-166864 {"address":"742 Example Ave, Test City"}
+  Expected: 405, there is no replace route
+  Actual:   405 (empty body)
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 2 Modify | Account B places an order on A's account (userId in body)
+  Request:  POST /api/orders {"userId":"ad37b850-f2e1-4fc4-a2cc-b4eeda02a395","mode":"pickup","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"","toppings":[],"qty":1}]}
+  Expected: 400, unexpected field: userId
+  Actual:   400 {"error":"Unexpected field(s): userId"}
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 2 Modify | Cross-site PATCH riding on B's cookie
+  Request:  PATCH /api/orders/SS-166864 (Origin: https://attacker.example) {"status":"making"}
+  Expected: 403 cross-site request rejected
+  Actual:   403 {"error":"Cross-site request rejected"}
+  Note:     Sent with Cookie: session=<redacted> (Account B's own valid session)
+
+[PASS] 3 Anonymous | No cookie: view A's order
+  Request:  GET /api/orders/SS-166864 
+  Expected: 401
+  Actual:   401 {"error":"Sign in to view this order"}
+  Note:     Sent with no Cookie header
+
+[PASS] 3 Anonymous | No cookie: change A's order
+  Request:  PATCH /api/orders/SS-166864 {"status":"making"}
+  Expected: 401
+  Actual:   401 {"error":"Sign in to update orders"}
+  Note:     Sent with no Cookie header
+
+[PASS] 4 Integrity | Account A's order after all of B's attempts
+  Request:  GET /api/orders/SS-166864 
+  Expected: 200, still "received", same items and subtotal
+  Actual:   200 {"id":"SS-166864","status":"received","placedAt":"2026-11-10T16:45:30.034Z","mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","name":"Pepperoni Classic","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1,"unitPrice":24.5,"lineTotal":24.5}],"subtotal":24.5}
+  Note:     Sent with Cookie: session=<redacted> (Account A's session)
+
+15/15 cases match the contract (http://localhost:3100)

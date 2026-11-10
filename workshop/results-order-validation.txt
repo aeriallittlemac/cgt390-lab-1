@@ -1,0 +1,196 @@
+Setup: signed up fictional customer validation-1794329296269-3797@example.test. Database: validation-test.db (temporary test database, deleted after the run)
+
+BEFORE (whole database): orders 0, order_items 0
+BEFORE (this customer):  []
+
+[PASS] 0 Control | Valid order (proves the database does record good orders)
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1}]}
+  Expected: 201; 1 order + 1 item written, subtotal 2450 cents
+  Actual:   201 {"id":"SS-430401","status":"received","placedAt":"2026-11-10T16:48:16.375Z","mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","name":"Pepperoni Classic","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1,"unitPrice":24.5,"lineTotal":24.5}],"subtotal":24.5}
+  Note:     DB before → after: orders 0, order_items 0 → orders 1, order_items 1; stored subtotal_cents=2450
+
+[PASS] 1 Missing field | Pizza with no size
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","crust":"Classic","toppings":["Jalapeno"],"qty":1}]}
+  Expected: 400 naming size; no rows written
+  Actual:   400 {"error":"items[0].size is required"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 1 Missing field | Line with no menuItemId
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1}]}
+  Expected: 400 naming menuItemId; no rows written
+  Actual:   400 {"error":"items[0].menuItemId is required"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 1 Missing field | Line with no qty
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"]}]}
+  Expected: 400 naming qty; no rows written
+  Actual:   400 {"error":"items[0].qty must be a whole number from 1 to 20"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 1 Missing field | Order with no storeId
+  Request:  POST /api/orders {"mode":"delivery","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1}]}
+  Expected: 400 naming storeId; no rows written
+  Actual:   400 {"error":"storeId is required"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 1 Missing field | Order with no items
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown"}
+  Expected: 400 naming items; no rows written
+  Actual:   400 {"error":"items must be an array"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 1 Missing field | Order with an empty items list
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[]}
+  Expected: 422 naming at least one item; no rows written
+  Actual:   422 {"error":"Order must contain at least one item"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 2 Quantity | Negative quantity (-2)
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":-2}]}
+  Expected: 400 naming qty; no rows written
+  Actual:   400 {"error":"items[0].qty must be a whole number from 1 to 20"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 2 Quantity | Zero quantity
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":0}]}
+  Expected: 400 naming qty; no rows written
+  Actual:   400 {"error":"items[0].qty must be a whole number from 1 to 20"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 2 Quantity | Fractional quantity (1.5)
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1.5}]}
+  Expected: 400 naming qty; no rows written
+  Actual:   400 {"error":"items[0].qty must be a whole number from 1 to 20"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 2 Quantity | Quantity as a string ("2")
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":"2"}]}
+  Expected: 400 naming qty; no rows written
+  Actual:   400 {"error":"items[0].qty must be a whole number from 1 to 20"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 2 Quantity | Quantity over the limit (21)
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":21}]}
+  Expected: 400 naming qty; no rows written
+  Actual:   400 {"error":"items[0].qty must be a whole number from 1 to 20"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 3 Unsupported | Topping not on the menu (Pineapple)
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Pineapple"],"qty":1}]}
+  Expected: 400 naming Pineapple; no rows written
+  Actual:   400 {"error":"items[0].toppings: \"Pineapple\" is not offered for Pepperoni Classic"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 3 Unsupported | Topping from a different pizza (Garlic is Margherita-only)
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Garlic"],"qty":1}]}
+  Expected: 400 naming Garlic; no rows written
+  Actual:   400 {"error":"items[0].toppings: \"Garlic\" is not offered for Pepperoni Classic"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 3 Unsupported | Same topping twice
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno","Jalapeno"],"qty":1}]}
+  Expected: 400 naming duplicates; no rows written
+  Actual:   400 {"error":"items[0].toppings contains duplicates"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 3 Unsupported | Size not offered (24")
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"24\"","crust":"Classic","toppings":["Jalapeno"],"qty":1}]}
+  Expected: 400 naming size; no rows written
+  Actual:   400 {"error":"items[0].size \"24\"\" is not offered for Pepperoni Classic"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 3 Unsupported | Crust on a drink
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"drink-soda","size":"20 oz","crust":"Thin","toppings":[],"qty":1}]}
+  Expected: 400 naming crust; no rows written
+  Actual:   400 {"error":"items[0].crust \"Thin\" is not offered for Fountain Soda"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 3 Unsupported | Item not on the menu (pizza-dessert)
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-dessert","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1}]}
+  Expected: 400 naming menuItemId; no rows written
+  Actual:   400 {"error":"items[0].menuItemId is not on the menu: pizza-dessert"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 3 Unsupported | Client-supplied category ("Desserts")
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1,"category":"Desserts"}]}
+  Expected: 400 naming category; no rows written
+  Actual:   400 {"error":"items[0]: unexpected field(s): category"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 3 Unsupported | Unknown store
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-nowhere","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1}]}
+  Expected: 422 naming Unknown store; no rows written
+  Actual:   422 {"error":"Unknown store: store-nowhere"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 3 Unsupported | Delivery from a pickup-only store
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-wicker","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1}]}
+  Expected: 422 naming delivery; no rows written
+  Actual:   422 {"error":"Slice Society — Wicker Park does not offer delivery"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 4 Tampered | Line unitPrice set to $0.01
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1,"unitPrice":0.01}]}
+  Expected: 400 naming unitPrice; no rows written
+  Actual:   400 {"error":"items[0]: unexpected field(s): unitPrice"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 4 Tampered | Line lineTotal set to $0
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1,"lineTotal":0}]}
+  Expected: 400 naming lineTotal; no rows written
+  Actual:   400 {"error":"items[0]: unexpected field(s): lineTotal"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 4 Tampered | Order subtotal set to $0.01
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1}],"subtotal":0.01}
+  Expected: 400 naming subtotal; no rows written
+  Actual:   400 {"error":"Unexpected field(s): subtotal"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 4 Tampered | Negative price (-24.50)
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1,"unitPrice":-24.5}]}
+  Expected: 400 naming unitPrice; no rows written
+  Actual:   400 {"error":"items[0]: unexpected field(s): unitPrice"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 4 Tampered | Order status set to "delivered"
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1}],"status":"delivered"}
+  Expected: 400 naming status; no rows written
+  Actual:   400 {"error":"Unexpected field(s): status"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 4 Tampered | Order id chosen by the client
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":[{"menuItemId":"pizza-pepperoni","size":"18\"","crust":"Classic","toppings":["Jalapeno"],"qty":1}],"id":"SS-000001"}
+  Expected: 400 naming \bid\b; no rows written
+  Actual:   400 {"error":"Unexpected field(s): id"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 5 Malformed | Body isn't valid JSON
+  Request:  POST /api/orders {"mode":"delivery",
+  Expected: 400; no rows written
+  Actual:   400 {"error":"Request body must be valid JSON"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 5 Malformed | Body is a JSON array
+  Request:  POST /api/orders []
+  Expected: 400; no rows written
+  Actual:   400 {"error":"Body must be a JSON object"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+[PASS] 5 Malformed | items is a string
+  Request:  POST /api/orders {"mode":"delivery","storeId":"store-downtown","items":"1 large pepperoni"}
+  Expected: 400 naming items; no rows written
+  Actual:   400 {"error":"items must be an array"}
+  Note:     DB before → after: orders 1, order_items 1 → orders 1, order_items 1 (unchanged)
+
+AFTER (whole database):  orders 1, order_items 1
+AFTER (this customer):   [{"id":"SS-430401","mode":"delivery","store_id":"store-downtown","status":"received","subtotal_cents":2450,"lines":1,"items_total_cents":2450}]
+Net change: orders +1, order_items +1 (expected +1/+1, the control order only)
+Invalid stored rows for this customer: none
+
+[PASS] 6 Final state | Only the valid control order was saved, and it breaks no rule
+  Request:  SELECT orders, order_items 
+  Expected: net +1 order, +1 item, 0 invalid rows
+  Actual:   DB orders +1, order_items +1, invalid rows: 0
+
+31/31 cases match the contract (http://localhost:3100)
