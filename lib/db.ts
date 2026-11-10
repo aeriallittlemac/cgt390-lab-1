@@ -41,7 +41,9 @@ CREATE TABLE IF NOT EXISTS orders (
   status         TEXT NOT NULL DEFAULT 'received'
                  CHECK (status IN ('received', 'making', 'baking', 'ready', 'out', 'delivered')),
   subtotal_cents INTEGER NOT NULL CHECK (subtotal_cents >= 0),
-  placed_at      TEXT NOT NULL
+  placed_at      TEXT NOT NULL,
+  idempotency_key TEXT, -- the checkout attempt's Idempotency-Key header, if sent
+  request_hash    TEXT  -- SHA-256 of what was ordered, to spot a reused key with different items
 );
 CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id, placed_at);
 
@@ -74,6 +76,22 @@ async function init(client: Client): Promise<void> {
     await client.executeMultiple("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
   }
   await client.executeMultiple(SCHEMA);
+
+  // CREATE TABLE IF NOT EXISTS leaves existing tables alone, so add columns
+  // introduced later to databases created before them.
+  const orderColumns = (await client.execute("PRAGMA table_info(orders)")).rows.map((r) => r.name);
+  for (const column of ["idempotency_key", "request_hash"]) {
+    if (!orderColumns.includes(column)) {
+      await client.execute(`ALTER TABLE orders ADD COLUMN ${column} TEXT`).catch((err) => {
+        // Another server instance may have just added it.
+        if (!/duplicate column/i.test(String(err))) throw err;
+      });
+    }
+  }
+  // One order per checkout attempt per user. Orders without a key (NULL) are unaffected.
+  await client.execute(
+    "CREATE UNIQUE INDEX IF NOT EXISTS orders_idempotency ON orders(user_id, idempotency_key)",
+  );
 }
 
 // Reuse one client (and one schema check) per server instance and across dev hot reloads.

@@ -1,5 +1,5 @@
 import "server-only";
-import { randomInt } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
 import { all, batch, get, run } from "./db";
 import type { OrderLine, ValidOrder } from "./orders";
 import type { OrderStatus, PublicUser, ServiceMode } from "./types";
@@ -78,8 +78,50 @@ async function hydrate(row: OrderRow): Promise<PlacedOrder> {
   };
 }
 
-/** Saves a validated order for its owner and returns it as stored. */
-export async function saveOrder(userId: string, order: ValidOrder): Promise<PlacedOrder> {
+export type SaveResult =
+  | { ok: true; order: PlacedOrder; replayed: boolean }
+  | { ok: false; status: 422; error: string };
+
+/** Fingerprint of what the customer chose (not prices), to compare repeats of one checkout. */
+function requestHash(order: ValidOrder): string {
+  const choices = {
+    mode: order.mode,
+    storeId: order.storeId,
+    items: order.items.map(({ menuItemId, size, crust, toppings, qty }) => ({ menuItemId, size, crust, toppings, qty })),
+  };
+  return createHash("sha256").update(JSON.stringify(choices)).digest("hex");
+}
+
+/** The order an earlier request with this key created for this user, if any. */
+async function findByKey(userId: string, key: string, hash: string): Promise<SaveResult | null> {
+  const row = await get<OrderRow & { request_hash: string | null }>(
+    "SELECT * FROM orders WHERE user_id = ? AND idempotency_key = ?",
+    [userId, key],
+  );
+  if (!row) return null;
+  if (row.request_hash !== hash) {
+    return {
+      ok: false,
+      status: 422,
+      error: `This checkout was already placed as order ${row.id} with different items. Reload the page to start a new order.`,
+    };
+  }
+  return { ok: true, order: await hydrate(row), replayed: true };
+}
+
+/**
+ * Saves a validated order for its owner and returns it as stored.
+ * With an idempotency key (one per checkout attempt), a repeat of the same
+ * request returns the order it already created instead of saving another.
+ * Keys are per user, so one customer's key never finds another's order.
+ */
+export async function saveOrder(userId: string, order: ValidOrder, idempotencyKey?: string): Promise<SaveResult> {
+  const hash = idempotencyKey ? requestHash(order) : null;
+  if (idempotencyKey && hash) {
+    const earlier = await findByKey(userId, idempotencyKey, hash);
+    if (earlier) return earlier;
+  }
+
   const placedAt = new Date().toISOString();
   // Six random digits; retry on the rare collision with an existing id.
   // (The primary key still rejects a duplicate that slips in between.)
@@ -89,31 +131,42 @@ export async function saveOrder(userId: string, order: ValidOrder): Promise<Plac
   } while (await get("SELECT 1 FROM orders WHERE id = ?", [id]));
 
   // The order and its items are written together or not at all.
-  await batch([
-    {
-      sql: `INSERT INTO orders (id, user_id, store_id, mode, status, subtotal_cents, placed_at)
-            VALUES (?, ?, ?, ?, 'received', ?, ?)`,
-      args: [id, userId, order.storeId, order.mode, toCents(order.subtotal), placedAt],
-    },
-    ...order.items.map((it, i) => ({
-      sql: `INSERT INTO order_items
-              (order_id, line_no, menu_item_id, name, size, crust, toppings, qty, unit_price_cents)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        id,
-        i,
-        it.menuItemId,
-        it.name,
-        it.size,
-        it.crust,
-        JSON.stringify(it.toppings),
-        it.qty,
-        toCents(it.unitPrice),
-      ],
-    })),
-  ]);
+  try {
+    await batch([
+      {
+        sql: `INSERT INTO orders
+                (id, user_id, store_id, mode, status, subtotal_cents, placed_at, idempotency_key, request_hash)
+              VALUES (?, ?, ?, ?, 'received', ?, ?, ?, ?)`,
+        args: [id, userId, order.storeId, order.mode, toCents(order.subtotal), placedAt, idempotencyKey ?? null, hash],
+      },
+      ...order.items.map((it, i) => ({
+        sql: `INSERT INTO order_items
+                (order_id, line_no, menu_item_id, name, size, crust, toppings, qty, unit_price_cents)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          id,
+          i,
+          it.menuItemId,
+          it.name,
+          it.size,
+          it.crust,
+          JSON.stringify(it.toppings),
+          it.qty,
+          toCents(it.unitPrice),
+        ],
+      })),
+    ]);
+  } catch (err) {
+    // Two copies of one checkout raced past the check above (e.g. a double-click);
+    // the unique index let only one in, so answer this one with that order.
+    if (idempotencyKey && hash && /UNIQUE constraint failed: orders\.user_id, orders\.idempotency_key/.test(String(err))) {
+      const earlier = await findByKey(userId, idempotencyKey, hash);
+      if (earlier) return earlier;
+    }
+    throw err;
+  }
 
-  return { id, status: "received", placedAt, ...order };
+  return { ok: true, order: { id, status: "received", placedAt, ...order }, replayed: false };
 }
 
 /**

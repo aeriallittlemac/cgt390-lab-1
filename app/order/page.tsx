@@ -8,6 +8,12 @@ import { useCart } from "@/context/CartContext";
 import { useHydrated } from "@/lib/clientStore";
 import { formatPrice } from "@/components/common/Price";
 
+// 32 random hex characters. getRandomValues works on plain-http LAN addresses too,
+// where crypto.randomUUID isn't available.
+function newCheckoutKey(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default function OrderPage() {
   const router = useRouter();
   const hydrated = useHydrated();
@@ -16,6 +22,9 @@ export default function OrderPage() {
   const [placing, setPlacing] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // One key per checkout attempt: a double-click or retry re-sends it, and the
+  // server answers with the order it already placed instead of a second one.
+  const [checkoutKey] = useState(newCheckoutKey);
 
   // Route guard: no confirmed location -> bounce home and open the drawer.
   useEffect(() => {
@@ -38,7 +47,7 @@ export default function OrderPage() {
       // Send only what the customer chose; the server sets prices, id and status.
       const res = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": checkoutKey },
         body: JSON.stringify({
           mode: selectedLocation!.mode,
           storeId: selectedLocation!.storeId,

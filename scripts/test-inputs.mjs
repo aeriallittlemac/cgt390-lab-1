@@ -66,12 +66,35 @@ r.check(O, "HTML/script text inside a field",
   "Never returned as an HTML page (Content-Type must be JSON)", res,
   /application\/json/.test(res.contentType ?? ""), `Content-Type: ${res.contentType}`);
 
-const first = await post({ body: order });
-res = await post({ body: order });
+// A double-click or network retry re-sends the same checkout attempt, which the
+// checkout page marks with one Idempotency-Key. Without a key the server can't tell
+// a retry from a deliberate second order (see the 200-order case below).
+const checkoutKey = `dup-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+const withKey = (key) => ({ "Idempotency-Key": key });
+const first = await post({ body: order, headers: withKey(checkoutKey) });
+res = await post({ body: order, headers: withKey(checkoutKey) });
 r.check(O, "Duplicate submission: the same order sent twice in a row",
   "Second request rejected (409) or answered with the first order's id", res,
   res.status === 409 || (res.json?.id && res.json.id === first.json?.id),
-  `First id ${first.json?.id ?? first.status}, second id ${res.json?.id ?? res.status}`);
+  `Both sent with Idempotency-Key ${checkoutKey}. First id ${first.json?.id ?? first.status}, second id ${res.json?.id ?? res.status}`);
+
+res = await post({ body: { ...order, items: [{ ...line, qty: 2 }] }, headers: withKey(checkoutKey) });
+r.check(O, "Same Idempotency-Key reused with different items",
+  "Rejected (409 or 422), not a second order and not the first order", res,
+  (res.status === 409 || res.status === 422) && !res.json?.id,
+  `Same key as above, qty changed from 1 to 2`);
+
+const other = createClient(BASE);
+const otherSignup = await other.request("POST", "/api/auth/signup", {
+  body: { name: "Input Tester 2", email: uniqueEmail("inputs-2"), password: "test-pass-123" },
+});
+if (otherSignup.status === 201) {
+  res = await other.request("POST", "/api/orders", { body: order, headers: withKey(checkoutKey) });
+  r.check(O, "Another account sends the first account's Idempotency-Key",
+    "Its own new order (201), never the first account's order", res,
+    res.status === 201 && res.json?.id && res.json.id !== first.json?.id,
+    `Different account, same key. First account's order ${first.json?.id}, this response ${res.json?.id ?? res.status}`);
+}
 
 const ids = [];
 let last = res;
