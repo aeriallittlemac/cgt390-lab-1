@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local SQLite database (accounts, sessions, orders)
 /.data/
+
+# Claude Code settings (machine-specific paths and permissions)
+/.claude/
