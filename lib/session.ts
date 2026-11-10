@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
-import { db } from "./db";
+import { get, run } from "./db";
 import { toPublicUser } from "./users";
 import type { PublicUser, UserRole } from "./types";
 
@@ -18,11 +18,11 @@ const hashToken = (token: string) => createHash("sha256").update(token).digest("
 export async function createSession(userId: string): Promise<void> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = Date.now() + SESSION_TTL_MS;
-  db.prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)").run(
+  await run("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)", [
     hashToken(token),
     userId,
     expiresAt,
-  );
+  ]);
 
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true, // not readable from page JavaScript
@@ -38,19 +38,23 @@ export async function getSessionUser(): Promise<PublicUser | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  const row = db
-    .prepare(
-      `SELECT s.id AS session_id, s.expires_at, u.id, u.name, u.email, u.role
-       FROM sessions s JOIN users u ON u.id = s.user_id
-       WHERE s.id = ?`,
-    )
-    .get(hashToken(token)) as
-    | { session_id: string; expires_at: number; id: string; name: string; email: string; role: UserRole }
-    | undefined;
+  const row = await get<{
+    session_id: string;
+    expires_at: number;
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+  }>(
+    `SELECT s.id AS session_id, s.expires_at, u.id, u.name, u.email, u.role
+     FROM sessions s JOIN users u ON u.id = s.user_id
+     WHERE s.id = ?`,
+    [hashToken(token)],
+  );
 
   if (!row) return null;
   if (row.expires_at <= Date.now()) {
-    db.prepare("DELETE FROM sessions WHERE id = ?").run(row.session_id);
+    await run("DELETE FROM sessions WHERE id = ?", [row.session_id]);
     return null;
   }
   return toPublicUser(row);
@@ -60,6 +64,6 @@ export async function getSessionUser(): Promise<PublicUser | null> {
 export async function deleteSession(): Promise<void> {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
-  if (token) db.prepare("DELETE FROM sessions WHERE id = ?").run(hashToken(token));
+  if (token) await run("DELETE FROM sessions WHERE id = ?", [hashToken(token)]);
   store.delete(SESSION_COOKIE);
 }

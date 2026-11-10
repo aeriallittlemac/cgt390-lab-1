@@ -18,12 +18,12 @@ export async function POST(request: NextRequest) {
   const result = validateOrder(parsed.body);
   if (!result.ok) return errorResponse(result.status, result.error);
 
-  return Response.json(saveOrder(user.id, result.order), { status: 201 });
+  return Response.json(await saveOrder(user.id, result.order), { status: 201 });
 }
 
 // Customers get their own orders; staff get every order.
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return errorResponse(401, "Sign in to view orders");
-  return Response.json({ orders: listOrdersFor(user) });
+  return Response.json({ orders: await listOrdersFor(user) });
 }

@@ -13,7 +13,7 @@ const storeName = new Map((storesData as Store[]).map((s) => [s.id, s.name]));
 
 export default async function AccountPage() {
   const user = await requireUser("/account");
-  const orders = listOrdersFor(user);
+  const orders = await listOrdersFor(user);
   const isStaff = user.role === "staff";
 
   return (

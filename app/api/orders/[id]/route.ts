@@ -9,7 +9,7 @@ export async function GET(_request: NextRequest, ctx: RouteContext<"/api/orders/
   const user = await getCurrentUser();
   if (!user) return errorResponse(401, "Sign in to view this order");
 
-  const order = getOrderFor(user, (await ctx.params).id);
+  const order = await getOrderFor(user, (await ctx.params).id);
   if (!order) return errorResponse(404, "Order not found");
   return Response.json(order);
 }
@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/orders
     return errorResponse(400, `status must be one of: ${ORDER_STATUSES.join(", ")}`);
   }
 
-  const result = advanceStatus((await ctx.params).id, status as OrderStatus);
+  const result = await advanceStatus((await ctx.params).id, status as OrderStatus);
   if (!result.ok) return errorResponse(result.status, result.error);
   return Response.json(result.order);
 }

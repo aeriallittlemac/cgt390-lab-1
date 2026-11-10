@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { db } from "./db";
+import { get, run } from "./db";
 import { burnPasswordCheck, hashPassword, verifyPassword } from "./password";
 import type { PublicUser, UserRole } from "./types";
 
@@ -86,10 +86,11 @@ export async function createUser(input: {
   const passwordHash = await hashPassword(input.password);
   const user = { id: randomUUID(), name: input.name, email: input.email, role: "customer" as const };
   try {
-    db.prepare(
+    await run(
       `INSERT INTO users (id, email, name, password_hash, role, created_at)
        VALUES (?, ?, ?, ?, 'customer', ?)`,
-    ).run(user.id, user.email, user.name, passwordHash, new Date().toISOString());
+      [user.id, user.email, user.name, passwordHash, new Date().toISOString()],
+    );
   } catch (err) {
     // The UNIQUE constraint on email is the real duplicate check, so two
     // simultaneous sign-ups with the same email can't both succeed.
@@ -103,9 +104,10 @@ export async function createUser(input: {
 
 /** Returns the user only if the email exists and the password matches. */
 export async function authenticate(email: string, password: string): Promise<PublicUser | null> {
-  const row = db
-    .prepare("SELECT id, name, email, role, password_hash FROM users WHERE email = ?")
-    .get(email) as UserRow | undefined;
+  const row = await get<UserRow>(
+    "SELECT id, name, email, role, password_hash FROM users WHERE email = ?",
+    [email],
+  );
   if (!row) {
     await burnPasswordCheck(password);
     return null;

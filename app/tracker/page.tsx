@@ -20,7 +20,7 @@ export default async function TrackerPage({ searchParams }: PageProps<"/tracker"
   const user = await requireUser(id ? `/tracker?id=${encodeURIComponent(id)}` : "/tracker");
 
   // Same lookup the API uses: other customers' orders are "not found".
-  const order = id ? getOrderFor(user, id) : null;
+  const order = id ? await getOrderFor(user, id) : null;
   const steps = order ? statusSteps(order.mode) : [];
   const current = order ? steps.indexOf(order.status) : -1;
 
